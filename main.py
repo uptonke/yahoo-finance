@@ -143,6 +143,7 @@ TW_TPEX_URL = os.getenv("TPEX_FOREIGN_FLOW_URL", "").strip()
 # 2. Session / HTTP helpers
 # =========================================================
 
+
 def build_session() -> requests.Session:
     session = requests.Session()
 
@@ -222,9 +223,11 @@ def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
 
+
 # =========================================================
 # 3. 通用 market helpers
 # =========================================================
+
 
 def infer_direction(change: Optional[float]) -> str:
     if change is None:
@@ -255,6 +258,7 @@ def build_as_of_label(date_str: Optional[str], market_session_label: str) -> str
 def format_close(value: Optional[float], cfg: Dict[str, Any]) -> str:
     if value is None:
         return "N/A"
+
     decimals = cfg.get("decimals", 2)
     currency = cfg.get("currency")
     unit = cfg.get("unit")
@@ -345,16 +349,13 @@ def build_ok_result(
 
     return result
 
+
 # =========================================================
 # 4. Twelve Data
 # =========================================================
 
-def fetch_twelve_data_quote(symbol: str) -> Dict[str, Any]:
-    if not TWELVE_DATA_API_KEY:
-        raise RuntimeError("Missing TWELVE_DATA_API_KEY")
 
-    url = "https://api.twelvedata.com/quote"
-    def fetch_twelve_data_quote(cfg: Dict[str, Any]) -> Dict[str, Any]:
+def fetch_twelve_data_quote(cfg: Dict[str, Any]) -> Dict[str, Any]:
     if not TWELVE_DATA_API_KEY:
         raise RuntimeError("Missing TWELVE_DATA_API_KEY")
 
@@ -367,7 +368,6 @@ def fetch_twelve_data_quote(symbol: str) -> Dict[str, Any]:
     if cfg.get("exchange"):
         params["exchange"] = cfg["exchange"]
 
-    return fetch_json(url, params=params)
     return fetch_json(url, params=params)
 
 
@@ -416,9 +416,11 @@ def fetch_market_from_twelve_data(key: str, cfg: Dict[str, Any]) -> Dict[str, An
     except Exception as e:
         return build_error_result(cfg, f"Twelve Data fetch failed: {e}")
 
+
 # =========================================================
 # 5. FRED
 # =========================================================
+
 
 def fetch_fred_series_observations(series_id: str) -> Dict[str, Any]:
     if not FRED_API_KEY:
@@ -471,9 +473,11 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         return build_error_result(cfg, f"FRED fetch failed: {e}")
 
+
 # =========================================================
 # 6. 台灣外資動向（骨架）
 # =========================================================
+
 
 def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
     return {
@@ -559,9 +563,11 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
         },
     }
 
+
 # =========================================================
 # 7. 央行動態（骨架）
 # =========================================================
+
 
 def extract_basic_rate_and_date_from_text(text: str) -> Dict[str, Any]:
     rate_match = re.search(r"(\d+(?:\.\d+)?)\s?%", text)
@@ -629,9 +635,11 @@ def fetch_all_central_banks() -> Dict[str, Any]:
         out[key] = fetch_central_bank_block(key, cfg)
     return out
 
+
 # =========================================================
 # 8. 組裝輸出
 # =========================================================
+
 
 def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     ok_items = [v for v in market_data.values() if v.get("status") == "ok"]
@@ -669,7 +677,8 @@ def build_report_ready_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str,
 
     return {
         "ordered_keys": [
-            k for k, _ in sorted(
+            k
+            for k, _ in sorted(
                 ((k, v) for k, v in market_data.items() if v.get("status") == "ok"),
                 key=lambda kv: kv[1].get("priority", 9999),
             )
@@ -724,21 +733,12 @@ def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, An
         "central_banks": central_bank_data,
     }
 
+
 # =========================================================
 # 9. main
 # =========================================================
 
-def main() -> None:
-    logger.info("Starting scheme A pipeline...")
 
-    market_data = fetch_market_data()
-    foreign_flow_payload = fetch_tw_foreign_flow()
-    taiwan_view = build_taiwan_view(market_data, foreign_flow_payload)
-    central_bank_data = fetch_all_central_banks()
-
-    market_output = build_market_output(market_data, taiwan_view)
-    central_bank_output = build_central_bank_output(central_bank_data)
-    
 def main() -> None:
     logger.info("Starting scheme A pipeline...")
 
@@ -757,7 +757,7 @@ def main() -> None:
     if failed_items:
         logger.error(
             "Failed market items: %s",
-            json.dumps(failed_items, ensure_ascii=False, indent=2)
+            json.dumps(failed_items, ensure_ascii=False, indent=2),
         )
 
     ok_count = market_output["summary_stats"]["ok_count"]
@@ -772,9 +772,6 @@ def main() -> None:
     logger.info("Done. Wrote %s", MARKET_OUTPUT_FILE)
     logger.info("Done. Wrote %s", CENTRAL_BANK_OUTPUT_FILE)
 
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
