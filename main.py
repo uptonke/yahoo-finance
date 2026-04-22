@@ -22,7 +22,7 @@ TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", "").strip()
 FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
 
 REQUEST_TIMEOUT = 20
-MIN_OK_COUNT = 4
+MIN_REQUIRED_OK_COUNT = 4
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +45,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "currency": "USD",
         "priority": 10,
         "decimals": 2,
+        "required": True,
         "note": "Using SPY ETF as S&P 500 proxy.",
     },
     "taiex": {
@@ -58,7 +59,8 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "currency": "TWD",
         "priority": 20,
         "decimals": 2,
-        "note": "Using 0050 ETF as Taiwan equity market proxy.",
+        "required": False,
+        "note": "Using 0050 ETF as Taiwan equity market proxy. Optional because Twelve Data plan coverage may vary.",
     },
     "wti": {
         "display_name": "WTI Crude Oil",
@@ -70,6 +72,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "currency": "USD",
         "priority": 30,
         "decimals": 2,
+        "required": True,
     },
     "usd_twd": {
         "display_name": "USD/TWD",
@@ -81,6 +84,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "currency": "TWD_PER_USD",
         "priority": 40,
         "decimals": 4,
+        "required": True,
         "note": "Using FRED DEXTAUS: Taiwan dollars to one U.S. dollar.",
     },
     "dxy_proxy": {
@@ -93,6 +97,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "currency": "INDEX_POINTS",
         "priority": 50,
         "decimals": 2,
+        "required": True,
         "note": "FRED broad dollar index proxy; not identical to ICE DXY.",
     },
     "us10y": {
@@ -106,6 +111,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "priority": 60,
         "decimals": 3,
         "unit": "%",
+        "required": True,
     },
 }
 
@@ -298,6 +304,7 @@ def build_error_result(cfg: Dict[str, Any], message: str) -> Dict[str, Any]:
         "market": cfg["market"],
         "currency": cfg["currency"],
         "priority": cfg["priority"],
+        "required": cfg.get("required", True),
         "error": message,
     }
 
@@ -329,6 +336,7 @@ def build_ok_result(
         "market": cfg["market"],
         "currency": cfg["currency"],
         "priority": cfg["priority"],
+        "required": cfg.get("required", True),
         "date": date_str,
         "close": safe_round(close, decimals),
         "prev_close": safe_round(prev_close, decimals),
@@ -643,6 +651,10 @@ def fetch_all_central_banks() -> Dict[str, Any]:
 
 def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     ok_items = [v for v in market_data.values() if v.get("status") == "ok"]
+    required_items = [v for v in market_data.values() if v.get("required", True)]
+    required_ok_items = [v for v in required_items if v.get("status") == "ok"]
+    optional_items = [v for v in market_data.values() if not v.get("required", True)]
+    optional_error_items = [v for v in optional_items if v.get("status") != "ok"]
 
     by_category: Dict[str, int] = {}
     for item in ok_items:
@@ -653,6 +665,11 @@ def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any
         "total_instruments": len(market_data),
         "ok_count": len(ok_items),
         "error_count": len(market_data) - len(ok_items),
+        "required_total": len(required_items),
+        "required_ok_count": len(required_ok_items),
+        "required_error_count": len(required_items) - len(required_ok_items),
+        "optional_total": len(optional_items),
+        "optional_error_count": len(optional_error_items),
         "category_counts": by_category,
     }
 
@@ -672,6 +689,7 @@ def build_report_ready_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str,
                 "display_change": item.get("display_change"),
                 "as_of_label": item.get("as_of_label"),
                 "direction": item.get("direction"),
+                "required": item.get("required", True),
             }
         )
 
@@ -707,7 +725,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.1",
+        "schema_version": "A.2",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -723,7 +741,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.1",
+        "schema_version": "A.2",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
@@ -760,10 +778,10 @@ def main() -> None:
             json.dumps(failed_items, ensure_ascii=False, indent=2),
         )
 
-    ok_count = market_output["summary_stats"]["ok_count"]
-    if ok_count < MIN_OK_COUNT:
+    required_ok_count = market_output["summary_stats"]["required_ok_count"]
+    if required_ok_count < MIN_REQUIRED_OK_COUNT:
         raise RuntimeError(
-            f"ok_count ({ok_count}) < MIN_OK_COUNT ({MIN_OK_COUNT}); refuse to write incomplete snapshot"
+            f"required_ok_count ({required_ok_count}) < MIN_REQUIRED_OK_COUNT ({MIN_REQUIRED_OK_COUNT}); refuse to write incomplete snapshot"
         )
 
     atomic_write_json(MARKET_OUTPUT_FILE, market_output)
