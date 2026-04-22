@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-22T07:57:48.535321+00:00",
-  "schema_version": "A.1",
+  "generated_at": "2026-04-22T08:13:44.719201+00:00",
+  "schema_version": "A.2",
   "source_stack": [
     "Fed official sources",
     "ECB official sources",
@@ -14,48 +14,49 @@
       "current_rate": "N/A",
       "next_meeting": "N/A",
       "market_pricing_path": "N/A",
-      "sources": {},
+      "sources": {
+        "current_rate_url": "https://www.federalreserve.gov/monetarypolicy.htm",
+        "schedule_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+      },
       "notes": [
-        "current_rate_url not configured",
-        "schedule_url not configured",
         "market_pricing_url not configured"
       ]
     },
     "ecb": {
       "status": "ok",
       "display_name": "ECB",
-      "current_rate": "N/A",
-      "next_meeting": "N/A",
-      "market_pricing_path": "N/A",
-      "sources": {},
-      "notes": [
-        "current_rate_url not configured",
-        "schedule_url not configured",
-        "market_pricing_url not configured"
-      ]
+      "current_rate": "50%",
+      "next_meeting": "2026-04-21",
+      "market_pricing_path": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n        <meta charset=\"utf-8\">        \n        <link rel=\"preload\" href=\"/shared/dist/fonts/opensans_fixed/OpenSans-Regular.woff2\" as=\"font\" crossorigin>\n        <link rel=\"preload\" href=\"/shared/dist/fonts/opensans_fixed/OpenSans-SemiBold.woff2\" as=\"font\" cro",
+      "sources": {
+        "current_rate_url": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+        "schedule_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+        "market_pricing_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html"
+      },
+      "notes": []
     },
     "boj": {
       "status": "ok",
       "display_name": "BOJ",
       "current_rate": "N/A",
       "next_meeting": "N/A",
-      "market_pricing_path": "N/A",
-      "sources": {},
-      "notes": [
-        "current_rate_url not configured",
-        "schedule_url not configured",
-        "market_pricing_url not configured"
-      ]
+      "market_pricing_path": "<!DOCTYPE html><html lang=\"en\">\r\n<head prefix=\"og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#\">\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta name=\"author\" content=\"\">\r\n<meta name=\"description\" content=\"\">\r\n<meta name=\"keywords\" content=",
+      "sources": {
+        "current_rate_url": "https://www.boj.or.jp/en/",
+        "schedule_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+        "market_pricing_url": "https://www.boj.or.jp/en/mopo/mpmdeci/state_2026/index.htm"
+      },
+      "notes": []
     },
     "pboc": {
-      "status": "ok",
+      "status": "partial_error",
       "display_name": "PBOC",
       "current_rate": "N/A",
       "next_meeting": "N/A",
       "market_pricing_path": "N/A",
       "sources": {},
       "notes": [
-        "current_rate_url not configured",
+        "current_rate fetch failed: 404 Client Error: Not Found for url: https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html",
         "schedule_url not configured",
         "market_pricing_url not configured"
       ]
