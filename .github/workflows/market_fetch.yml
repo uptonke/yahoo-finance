@@ -20,11 +20,11 @@ jobs:
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
       # Twelve Data symbols，可依實測再微調
-      TD_SP500_SYMBOL: SPY
-      TD_TAIEX_SYMBOL: 0050
-      TD_TAIEX_EXCHANGE: TWSE
-      TD_WTI_SYMBOL: WTI
-      FRED_USDTWD_SERIES: DEXTAUS
+      TD_SP500_SYMBOL: "SPY"
+      TD_TAIEX_SYMBOL: "0050"
+      TD_TAIEX_EXCHANGE: "TWSE"
+      TD_WTI_SYMBOL: "WTI"
+      FRED_USDTWD_SERIES: "DEXTAUS"
 
       # 台灣外資官方頁（先留空也可）
       TWSE_FOREIGN_FLOW_URL: ""
