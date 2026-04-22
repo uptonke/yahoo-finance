@@ -19,17 +19,18 @@ jobs:
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
-      TWSE_FOREIGN_FLOW_API_URL: "https://www.twse.com.tw/rwd/zh/fund/T86"
-      TWSE_FOREIGN_FLOW_SELECT_TYPE: "ALLBUT0999"
-
       TD_SP500_SYMBOL: "SPY"
       TD_TAIEX_SYMBOL: "0050"
       TD_TAIEX_EXCHANGE: "TWSE"
       TD_WTI_SYMBOL: "WTI"
       FRED_USDTWD_SERIES: "DEXTAUS"
 
-      TWSE_FOREIGN_FLOW_URL: ""
-      TPEX_FOREIGN_FLOW_URL: "https://www.tpex.org.tw/zh-tw/mainboard/trading/major-institutional/detail/day.html"
+      TWSE_FOREIGN_FLOW_API_URL: "https://www.twse.com.tw/rwd/zh/fund/T86"
+      TWSE_FOREIGN_FLOW_SELECT_TYPE: "ALLBUT0999"
+
+      TPEX_FOREIGN_FLOW_API_URL: "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade"
+      TPEX_FOREIGN_FLOW_SECT: "AL"
+      TPEX_FOREIGN_FLOW_TYPE: "Daily"
 
       FED_RATE_URL: "https://www.federalreserve.gov/monetarypolicy.htm"
       FED_SCHEDULE_URL: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
@@ -46,10 +47,6 @@ jobs:
       PBOC_RATE_URL: "https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html"
       PBOC_SCHEDULE_URL: ""
       PBOC_MARKET_PRICING_URL: ""
-
-      TPEX_FOREIGN_FLOW_API_URL: "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade"
-      TPEX_FOREIGN_FLOW_SECT: "AL"
-      TPEX_FOREIGN_FLOW_TYPE: "Daily"
 
     steps:
       - name: Checkout repo
