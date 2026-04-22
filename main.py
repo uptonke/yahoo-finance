@@ -1,9 +1,10 @@
+import csv
+import html
 import json
 import logging
 import os
 import re
-import csv
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -171,7 +172,10 @@ TWSE_FOREIGN_FLOW_API_URL = os.getenv(
     "TWSE_FOREIGN_FLOW_API_URL",
     "https://www.twse.com.tw/rwd/zh/fund/T86",
 ).strip()
-TWSE_FOREIGN_FLOW_SELECT_TYPE = os.getenv("TWSE_FOREIGN_FLOW_SELECT_TYPE", "ALLBUT0999").strip()
+TWSE_FOREIGN_FLOW_SELECT_TYPE = os.getenv(
+    "TWSE_FOREIGN_FLOW_SELECT_TYPE",
+    "ALLBUT0999",
+).strip()
 
 TPEX_FOREIGN_FLOW_API_URL = os.getenv(
     "TPEX_FOREIGN_FLOW_API_URL",
@@ -292,6 +296,27 @@ def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
 
+
+def normalize_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def html_to_visible_text(raw_html: str) -> str:
+    text = re.sub(r"(?is)<script.*?>.*?</script>", " ", raw_html)
+    text = re.sub(r"(?is)<style.*?>.*?</style>", " ", text)
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</(p|div|li|tr|td|th|h1|h2|h3|h4|h5|h6|section|article)>", "\n", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = html.unescape(text)
+    return text
+
+
+def html_to_lines(raw_html: str) -> list[str]:
+    text = html_to_visible_text(raw_html)
+    lines = [normalize_whitespace(line) for line in text.splitlines()]
+    return [line for line in lines if line]
+
+
 # =========================================================
 # 3. 通用 market helpers
 # =========================================================
@@ -331,9 +356,7 @@ def format_close(value: Optional[float], cfg: Dict[str, Any]) -> str:
     currency = cfg.get("currency")
     unit = cfg.get("unit")
 
-    if unit == "%":
-        return f"{format_number(value, decimals)}%"
-    if currency == "PERCENT":
+    if unit == "%" or currency == "PERCENT":
         return f"{format_number(value, decimals)}%"
     return format_number(value, decimals)
 
@@ -420,9 +443,6 @@ def build_ok_result(
     return result
 
 
-def normalize_whitespace(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
-
 # =========================================================
 # 4. Twelve Data
 # =========================================================
@@ -489,6 +509,7 @@ def fetch_market_from_twelve_data(key: str, cfg: Dict[str, Any]) -> Dict[str, An
     except Exception as e:
         return build_error_result(cfg, f"Twelve Data fetch failed: {e}")
 
+
 # =========================================================
 # 5. FRED
 # =========================================================
@@ -544,6 +565,7 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
         return parse_fred_series(cfg, payload)
     except Exception as e:
         return build_error_result(cfg, f"FRED fetch failed: {e}")
+
 
 # =========================================================
 # 6. 台灣外資動向
@@ -609,6 +631,16 @@ def normalize_to_iso_date(date_str: Optional[str]) -> Optional[str]:
         return f"{year:04d}-{month:02d}-{day:02d}"
 
     return s
+
+
+def parse_iso_date(date_str: Optional[str]) -> Optional[date]:
+    normalized = normalize_to_iso_date(date_str)
+    if not normalized:
+        return None
+    try:
+        return datetime.strptime(normalized, "%Y-%m-%d").date()
+    except Exception:
+        return None
 
 
 def build_foreign_flow_structural_read(single_day_raw: Optional[int]) -> str:
@@ -826,8 +858,16 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
                 continue
 
             v_ex = clean_int(row[idx_foreign_ex])
-            v_dealer = clean_int(row[idx_foreign_dealer]) if idx_foreign_dealer is not None and idx_foreign_dealer < len(row) else 0
-            v_three = clean_int(row[idx_three_insti]) if idx_three_insti is not None and idx_three_insti < len(row) else None
+            v_dealer = (
+                clean_int(row[idx_foreign_dealer])
+                if idx_foreign_dealer is not None and idx_foreign_dealer < len(row)
+                else 0
+            )
+            v_three = (
+                clean_int(row[idx_three_insti])
+                if idx_three_insti is not None and idx_three_insti < len(row)
+                else None
+            )
 
             if v_ex is not None:
                 foreign_ex_dealer_net += v_ex
@@ -893,7 +933,6 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
 def fetch_tw_foreign_flow() -> Dict[str, Any]:
     tpex_payload = fetch_tpex_foreign_flow_api()
     twse_payload = fetch_twse_foreign_flow_api(reference_date=tpex_payload.get("date"))
-
     return {
         "twse": twse_payload,
         "tpex": tpex_payload,
@@ -925,6 +964,7 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
         )
 
     combined_val = None
+    source_used = None
     if twse_raw is not None and tpex_raw is not None:
         combined_val = twse_raw + tpex_raw
         source_used = "twse+tpex"
@@ -934,8 +974,6 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
     elif tpex_raw is not None:
         combined_val = tpex_raw
         source_used = "tpex"
-    else:
-        source_used = None
 
     twse_date = foreign_flow_payload.get("twse", {}).get("date")
     tpex_date = foreign_flow_payload.get("tpex", {}).get("date")
@@ -968,6 +1006,7 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
         },
     }
 
+
 # =========================================================
 # 7. 央行動態（升級版：Fed/ECB 結構化；BOJ/PBOC 官方混合）
 # =========================================================
@@ -988,15 +1027,6 @@ MONTH_MAP = {
     "NOV": 11,
     "DEC": 12,
 }
-
-
-def parse_iso_date(date_str: Optional[str]) -> Optional[datetime.date]:
-    if not date_str:
-        return None
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()
-    except Exception:
-        return None
 
 
 def fetch_fred_latest_observation(series_id: str) -> Dict[str, Any]:
@@ -1061,7 +1091,7 @@ def fetch_ecb_latest_observation(series_key: str) -> Dict[str, Any]:
 
 
 def extract_percent_from_text(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
+    flat = normalize_whitespace(html_to_visible_text(text))
 
     patterns = [
         r"around\s+(\d+(?:\.\d+)?)\s*percent",
@@ -1076,12 +1106,48 @@ def extract_percent_from_text(text: str) -> Optional[str]:
 
 
 def extract_next_fed_meeting(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
+    lines = html_to_lines(text)
     today = taipei_now().date()
     year = today.year
 
+    start_idx = None
+    end_idx = None
+
+    for i, line in enumerate(lines):
+        if line == f"{year} FOMC Meetings":
+            start_idx = i
+            continue
+        if start_idx is not None and line in {
+            f"{year - 1} FOMC Meetings",
+            f"{year + 1} FOMC Meetings",
+        }:
+            end_idx = i
+            break
+
+    if start_idx is not None:
+        block = lines[start_idx:end_idx] if end_idx is not None else lines[start_idx:]
+
+        i = 0
+        while i < len(block) - 1:
+            month_line = block[i].strip()
+            date_line = block[i + 1].strip()
+
+            month_num = MONTH_MAP.get(month_line.upper()[:3])
+            if month_num:
+                m = re.fullmatch(r"(\d{1,2})-(\d{1,2})\*?", date_line)
+                if m:
+                    end_day = int(m.group(2))
+                    try:
+                        meeting_date = datetime(year, month_num, end_day).date()
+                        if meeting_date >= today:
+                            return meeting_date.isoformat()
+                    except Exception:
+                        pass
+            i += 1
+
+    flat = normalize_whitespace(html_to_visible_text(text))
     m = re.search(
-        rf"2026 FOMC Meetings(.*?)(?:2025 FOMC Meetings|2027 FOMC Meetings|Note:|Back to Top|$)",
+        rf"{year}\s+FOMC Meetings(.*?)(?:{year - 1}\s+FOMC Meetings|{year + 1}\s+FOMC Meetings|$)",
         flat,
         re.I,
     )
@@ -1089,7 +1155,6 @@ def extract_next_fed_meeting(text: str) -> Optional[str]:
         return None
 
     block = m.group(1)
-
     matches = re.findall(
         r"([A-Za-z]+(?:/[A-Za-z]+)?)\s+(\d{1,2})-(\d{1,2})\*?",
         block,
@@ -1097,59 +1162,43 @@ def extract_next_fed_meeting(text: str) -> Optional[str]:
     )
 
     for month_name, _day1, day2 in matches:
-        month_name = month_name.split("/")[0]
-        month_num = MONTH_MAP.get(month_name.upper()[:3])
+        month_num = MONTH_MAP.get(month_name.split("/")[0].upper()[:3])
         if not month_num:
             continue
-
         try:
             meeting_date = datetime(year, month_num, int(day2)).date()
+            if meeting_date >= today:
+                return meeting_date.isoformat()
         except Exception:
             continue
-
-        if meeting_date >= today:
-            return meeting_date.isoformat()
-
-    return None
-
-    block = lines[start_idx:end_idx] if end_idx is not None else lines[start_idx:]
-
-    i = 0
-    while i < len(block):
-        month_line = block[i]
-        month_line_clean = month_line.replace("#", "").strip()
-        month_key = month_line_clean.upper().replace("/", " ")
-        month_parts = month_key.split()
-
-        month_num = None
-        for part in month_parts:
-            part3 = part[:3]
-            if part3 in MONTH_MAP:
-                month_num = MONTH_MAP[part3]
-                break
-
-        if month_num is not None and i + 1 < len(block):
-            next_line = block[i + 1]
-            m = re.search(r"(\d{1,2})-(\d{1,2})", next_line)
-            if m:
-                end_day = int(m.group(2))
-                try:
-                    meeting_date = datetime(year, month_num, end_day).date()
-                    if meeting_date >= today:
-                        return meeting_date.isoformat()
-                except Exception:
-                    pass
-        i += 1
 
     return None
 
 
 def extract_next_ecb_meeting(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
+    lines = html_to_lines(text)
     today = taipei_now().date()
 
+    for i in range(len(lines) - 1):
+        date_line = lines[i]
+        desc_line = lines[i + 1]
+
+        m = re.fullmatch(r"(\d{2})/(\d{2})/(\d{4})", date_line)
+        if not m:
+            continue
+
+        if "monetary policy meeting" in desc_line.lower() and "day 2" in desc_line.lower():
+            day, month, year = map(int, m.groups())
+            try:
+                meeting_date = datetime(year, month, day).date()
+                if meeting_date >= today:
+                    return meeting_date.isoformat()
+            except Exception:
+                continue
+
+    flat = normalize_whitespace(html_to_visible_text(text))
     matches = re.findall(
-        r"(\d{2})/(\d{2})/(\d{4})\s+Governing Council of the ECB:\s+monetary policy meeting.*?\(Day 2\)",
+        r"(\d{2})/(\d{2})/(\d{4}).{0,200}?monetary policy meeting.{0,80}?day 2",
         flat,
         re.I,
     )
@@ -1157,20 +1206,50 @@ def extract_next_ecb_meeting(text: str) -> Optional[str]:
     for day, month, year in matches:
         try:
             meeting_date = datetime(int(year), int(month), int(day)).date()
+            if meeting_date >= today:
+                return meeting_date.isoformat()
         except Exception:
             continue
 
-        if meeting_date >= today:
-            return meeting_date.isoformat()
-
     return None
-def extract_next_boj_meeting(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
-    year = taipei_now().year
-    today = taipei_now().date()
 
+
+def extract_next_boj_meeting(text: str) -> Optional[str]:
+    lines = html_to_lines(text)
+    today = taipei_now().date()
+    year = today.year
+
+    start_idx = None
+    for i, line in enumerate(lines):
+        if f"Table : {year} Date of MPM Release Schedule" in line:
+            start_idx = i
+            break
+
+    if start_idx is not None:
+        block = " ".join(lines[start_idx:start_idx + 40])
+        matches = re.findall(
+            r"([A-Za-z]{3,4})\.?\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
+            block,
+            re.I,
+        )
+
+        for month_name, _day1, day2 in matches:
+            month_num = MONTH_MAP.get(month_name.upper())
+            if not month_num:
+                month_num = MONTH_MAP.get(month_name.upper()[:3])
+            if not month_num:
+                continue
+
+            try:
+                meeting_date = datetime(year, month_num, int(day2)).date()
+                if meeting_date >= today:
+                    return meeting_date.isoformat()
+            except Exception:
+                continue
+
+    flat = normalize_whitespace(html_to_visible_text(text))
     m = re.search(
-        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:Table\s*:\s*{year - 1}\s*Date of MPM Release Schedule|$)",
+        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:Table\s*:|$)",
         flat,
         re.I,
     )
@@ -1178,7 +1257,6 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
         return None
 
     block = m.group(1)
-
     matches = re.findall(
         r"([A-Za-z]{3,4})\.?\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
         block,
@@ -1201,8 +1279,9 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
 
     return None
 
+
 def extract_latest_pboc_meeting(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
+    flat = normalize_whitespace(html_to_visible_text(text))
     m = re.search(
         r"(\d{4}-\d{2}-\d{2})\s+PBOC Monetary Policy Committee Holds",
         flat,
@@ -1316,7 +1395,9 @@ def fetch_boj_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 result["current_rate"] = parsed_rate
             result["sources"]["current_rate_url"] = cfg["current_rate_url"]
         else:
-            result["notes"].append("current_rate_url not configured; BOJ policy target remains statement-driven")
+            result["notes"].append(
+                "current_rate_url not configured; BOJ policy target remains statement-driven"
+            )
     except Exception as e:
         result["status"] = "partial_error"
         result["notes"].append(f"current_rate fetch failed: {e}")
@@ -1352,10 +1433,10 @@ def fetch_pboc_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "notes": [],
     }
 
-    # PBOC 英文官網目前穩定可抓的是 MPC Meetings 列表；
-    # 當前政策利率不強行抓，避免 404 / 假解析
     if cfg.get("current_rate_url"):
-        result["notes"].append("current_rate_url configured but skipped; no verified stable structured English endpoint for current PBOC policy rate")
+        result["notes"].append(
+            "current_rate_url configured but skipped; no verified stable structured English endpoint for current PBOC policy rate"
+        )
 
     try:
         if cfg.get("schedule_url"):
@@ -1419,19 +1500,10 @@ def fetch_all_central_banks() -> Dict[str, Any]:
         out[key] = fetch_central_bank_block(key, cfg)
     return out
 
+
 # =========================================================
 # 8. Hardening: smoke test + stale protection
 # =========================================================
-
-
-def parse_iso_date(date_str: Optional[str]) -> Optional[datetime.date]:
-    normalized = normalize_to_iso_date(date_str)
-    if not normalized:
-        return None
-    try:
-        return datetime.strptime(normalized, "%Y-%m-%d").date()
-    except Exception:
-        return None
 
 
 def days_old_from_taipei(date_str: Optional[str]) -> Optional[int]:
@@ -1532,6 +1604,7 @@ def run_smoke_tests(market_output: Dict[str, Any], central_bank_output: Dict[str
             f"foreign_flow.single_day_raw must be int or None, got {type(foreign_flow_raw).__name__}"
         )
 
+
 # =========================================================
 # 9. 組裝輸出
 # =========================================================
@@ -1617,7 +1690,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
         "source_stack": [
             "Twelve Data",
             "FRED",
-            "TWSE/TPEX official pages",
+            "TWSE/TPEX official APIs",
         ],
         "summary_stats": build_summary_stats(market_data),
         "report_ready_view": build_report_ready_view(market_data),
@@ -1631,13 +1704,14 @@ def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, An
         "generated_at": now_iso(),
         "schema_version": SCHEMA_VERSION,
         "source_stack": [
-            "Fed official sources",
-            "ECB official sources",
+            "Fed official structured sources",
+            "ECB official structured sources",
             "BOJ official sources",
-            "PBOC/CFETS official sources",
+            "PBOC official sources",
         ],
         "central_banks": central_bank_data,
     }
+
 
 # =========================================================
 # 10. main
