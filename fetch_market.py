@@ -13,7 +13,10 @@ DEFAULT_HISTORY_PERIOD = "1mo"
 
 # 批次抓取重試
 BATCH_RETRIES = 3
-BATCH_BACKOFF_SECONDS = [20, 60, 120]
+BATCH_BACKOFF_SECONDS = [20, 60]
+
+# 至少成功幾個標的才允許覆蓋舊快照
+MIN_OK_COUNT = 6
 
 INSTRUMENTS: Dict[str, Dict[str, Any]] = {
     "sp500": {
@@ -335,7 +338,8 @@ def download_all_symbols(symbols: list[str]) -> pd.DataFrame:
             )
             if df is not None and not df.empty:
                 return df
-            last_error = "empty dataframe"
+
+            last_error = "empty dataframe returned by yfinance (likely rate-limited; see failed downloads log above)"
         except Exception as e:
             last_error = str(e)
 
@@ -357,7 +361,6 @@ def extract_symbol_history(batch_df: pd.DataFrame, symbol: str) -> pd.DataFrame:
             return pd.DataFrame()
         df = batch_df[symbol].copy()
     else:
-        # 理論上多 ticker 不太會走到這裡，但保底
         df = batch_df.copy()
 
     if "Close" not in df.columns:
@@ -537,7 +540,6 @@ def main() -> None:
         batch_df = download_all_symbols(symbols)
     except Exception as e:
         print(f"FATAL: {e}")
-        # 全批失敗時，直接讓 workflow fail，避免把舊資料覆蓋成全 error JSON
         sys.exit(1)
 
     for key, instrument in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"]):
@@ -548,9 +550,13 @@ def main() -> None:
         market_data[key] = result
         print(f"  -> {result}")
 
+    error_symbols = [k for k, v in market_data.items() if v.get("status") == "error"]
+    if error_symbols:
+        print(f"WARNING: failed symbols: {error_symbols}")
+
     output = {
         "generated_at": get_now_utc_iso(),
-        "schema_version": "Z.2",
+        "schema_version": "Z.3",
         "source": "Yahoo Finance via yfinance",
         "note": (
             "Each instrument contains the latest available close and previous valid close. "
@@ -565,13 +571,17 @@ def main() -> None:
     }
 
     ok_count = output["summary_stats"]["ok_count"]
-    if ok_count == 0:
-        print("FATAL: ok_count == 0, refuse to overwrite previous snapshot.")
+    if ok_count < MIN_OK_COUNT:
+        print(f"FATAL: ok_count ({ok_count}) < MIN_OK_COUNT ({MIN_OK_COUNT}), refuse to overwrite previous snapshot.")
         sys.exit(1)
 
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+
+    tmp_file = OUTPUT_FILE + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
+
+    os.replace(tmp_file, OUTPUT_FILE)
 
     print(f"\n=== Done. Saved to {OUTPUT_FILE} ===")
     print(json.dumps(output, ensure_ascii=False, indent=2))
