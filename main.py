@@ -1076,29 +1076,41 @@ def extract_percent_from_text(text: str) -> Optional[str]:
 
 
 def extract_next_fed_meeting(text: str) -> Optional[str]:
-    lines = [normalize_whitespace(line) for line in text.splitlines()]
-    lines = [line for line in lines if line]
-
-    year = taipei_now().year
+    flat = normalize_whitespace(text)
     today = taipei_now().date()
+    year = today.year
 
-    start_idx = None
-    end_idx = None
-
-    for i, line in enumerate(lines):
-        if re.fullmatch(rf"#+\s*{year}\s+FOMC Meetings", line, re.I) or re.fullmatch(rf"{year}\s+FOMC Meetings", line, re.I):
-            start_idx = i
-            continue
-        if start_idx is not None and (
-            re.fullmatch(rf"#+\s*{year + 1}\s+FOMC Meetings", line, re.I)
-            or re.fullmatch(rf"{year + 1}\s+FOMC Meetings", line, re.I)
-            or re.fullmatch(rf"#+\s*{year - 1}\s+FOMC Meetings", line, re.I)
-        ):
-            end_idx = i
-            break
-
-    if start_idx is None:
+    m = re.search(
+        rf"2026 FOMC Meetings(.*?)(?:2025 FOMC Meetings|2027 FOMC Meetings|Note:|Back to Top|$)",
+        flat,
+        re.I,
+    )
+    if not m:
         return None
+
+    block = m.group(1)
+
+    matches = re.findall(
+        r"([A-Za-z]+(?:/[A-Za-z]+)?)\s+(\d{1,2})-(\d{1,2})\*?",
+        block,
+        re.I,
+    )
+
+    for month_name, _day1, day2 in matches:
+        month_name = month_name.split("/")[0]
+        month_num = MONTH_MAP.get(month_name.upper()[:3])
+        if not month_num:
+            continue
+
+        try:
+            meeting_date = datetime(year, month_num, int(day2)).date()
+        except Exception:
+            continue
+
+        if meeting_date >= today:
+            return meeting_date.isoformat()
+
+    return None
 
     block = lines[start_idx:end_idx] if end_idx is not None else lines[start_idx:]
 
@@ -1145,13 +1157,13 @@ def extract_next_ecb_meeting(text: str) -> Optional[str]:
     for day, month, year in matches:
         try:
             meeting_date = datetime(int(year), int(month), int(day)).date()
-            if meeting_date >= today:
-                return meeting_date.isoformat()
         except Exception:
             continue
 
-    return None
+        if meeting_date >= today:
+            return meeting_date.isoformat()
 
+    return None
 def extract_next_boj_meeting(text: str) -> Optional[str]:
     flat = normalize_whitespace(text)
     year = taipei_now().year
