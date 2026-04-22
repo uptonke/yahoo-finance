@@ -51,7 +51,7 @@ jobs:
       BOJ_SCHEDULE_URL: "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm"
       BOJ_MARKET_PRICING_URL: "https://www.boj.or.jp/en/mopo/mpmdeci/state_2026/index.htm"
 
-      PBOC_RATE_URL: "https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html"
+      PBOC_RATE_URL: ""
       PBOC_SCHEDULE_URL: "https://www.pbc.gov.cn/en/3688229/3688311/3688329/index.html"
       PBOC_MARKET_PRICING_URL: ""
 
