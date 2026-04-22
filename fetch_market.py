@@ -2,6 +2,7 @@ import json
 import os
 import time
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 import yfinance as yf
@@ -12,7 +13,7 @@ MAX_RETRIES = 3
 RETRY_SLEEP_SECONDS = 1.5
 
 
-INSTRUMENTS = {
+INSTRUMENTS: Dict[str, Dict[str, Any]] = {
     "sp500": {
         "display_name": "S&P 500",
         "symbol": "^GSPC",
@@ -120,7 +121,7 @@ INSTRUMENTS = {
 }
 
 
-def safe_round(value, digits=4):
+def safe_round(value: Any, digits: int = 4) -> Optional[float]:
     try:
         if value is None or pd.isna(value):
             return None
@@ -129,20 +130,52 @@ def safe_round(value, digits=4):
         return None
 
 
-def calculate_change_metrics(close, prev_close, price_digits=4, pct_digits=2):
-    if close is None or prev_close is None:
-        return None, None
-
-    change = round(close - prev_close, price_digits)
-
-    if prev_close == 0:
-        return change, None
-
-    change_pct = round((change / prev_close) * 100, pct_digits)
-    return change, change_pct
+def format_number(value: Optional[float], decimals: int = 2, use_sign: bool = False) -> str:
+    if value is None:
+        return "N/A"
+    fmt = f"{{:{'+' if use_sign else ''},.{decimals}f}}"
+    return fmt.format(value)
 
 
-def transform_price(raw_value, instrument):
+def get_now_utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def get_freshness_days(date_str: str) -> Optional[int]:
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        now_utc = datetime.now(timezone.utc).date()
+        return (now_utc - d).days
+    except Exception:
+        return None
+
+
+def infer_is_latest_trading_day(date_str: str) -> Optional[bool]:
+    freshness_days = get_freshness_days(date_str)
+    if freshness_days is None:
+        return None
+    return freshness_days <= 1
+
+
+def infer_market_session_label(is_latest_trading_day: Optional[bool]) -> str:
+    if is_latest_trading_day is True:
+        return "latest"
+    if is_latest_trading_day is False:
+        return "recent_trading_day"
+    return "unknown"
+
+
+def infer_direction(change: Optional[float]) -> str:
+    if change is None:
+        return "unknown"
+    if change > 0:
+        return "up"
+    if change < 0:
+        return "down"
+    return "flat"
+
+
+def transform_price(raw_value: float, instrument: Dict[str, Any]) -> Tuple[float, Optional[str]]:
     transform_cfg = instrument.get("transform")
     if not transform_cfg:
         return raw_value, None
@@ -153,48 +186,24 @@ def transform_price(raw_value, instrument):
     return transformed, unit
 
 
-def get_freshness_days(latest_date_str):
-    try:
-        latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-        now_utc = datetime.now(timezone.utc).date()
-        return (now_utc - latest_date).days
-    except Exception:
-        return None
+def calculate_change_metrics(
+    close: Optional[float],
+    prev_close: Optional[float],
+    price_digits: int = 4,
+    pct_digits: int = 2
+) -> Tuple[Optional[float], Optional[float]]:
+    if close is None or prev_close is None:
+        return None, None
+
+    change = round(close - prev_close, price_digits)
+    if prev_close == 0:
+        return change, None
+
+    change_pct = round((change / prev_close) * 100, pct_digits)
+    return change, change_pct
 
 
-def infer_is_latest_trading_day(latest_date_str):
-    freshness_days = get_freshness_days(latest_date_str)
-    if freshness_days is None:
-        return None
-    return freshness_days <= 1
-
-
-def infer_market_session_label(is_latest_trading_day):
-    if is_latest_trading_day is True:
-        return "latest"
-    if is_latest_trading_day is False:
-        return "recent_trading_day"
-    return "unknown"
-
-
-def infer_direction(change):
-    if change is None:
-        return "unknown"
-    if change > 0:
-        return "up"
-    if change < 0:
-        return "down"
-    return "flat"
-
-
-def format_number(value, decimals=2, use_sign=False):
-    if value is None:
-        return "N/A"
-    fmt = f"{{:{'+' if use_sign else ''},.{decimals}f}}"
-    return fmt.format(value)
-
-
-def format_close(close, instrument, unit=None):
+def format_close(close: Optional[float], instrument: Dict[str, Any], unit: Optional[str]) -> str:
     if close is None:
         return "N/A"
 
@@ -204,27 +213,27 @@ def format_close(close, instrument, unit=None):
     if unit == "%":
         return f"{format_number(close, decimals)}%"
 
-    if currency == "USD":
-        return format_number(close, decimals)
-    if currency == "TWD":
-        return format_number(close, decimals)
     if currency == "PERCENT":
         return f"{format_number(close, decimals)}%"
-    if currency in {"INDEX_POINTS", "TWD_PER_USD"}:
+    if currency in {"USD", "TWD", "INDEX_POINTS", "TWD_PER_USD"}:
         return format_number(close, decimals)
 
     return format_number(close, decimals)
 
 
-def format_change(change, change_pct, instrument, unit=None):
+def format_change(
+    change: Optional[float],
+    change_pct: Optional[float],
+    instrument: Dict[str, Any],
+    unit: Optional[str]
+) -> str:
     if change is None:
         return "N/A"
 
     decimals = instrument.get("decimals", 2)
+    currency = instrument.get("currency")
 
-    if unit == "%":
-        base = f"{format_number(change, decimals, use_sign=True)}pp"
-    elif instrument.get("currency") == "PERCENT":
+    if unit == "%" or currency == "PERCENT":
         base = f"{format_number(change, decimals, use_sign=True)}pp"
     else:
         base = format_number(change, decimals, use_sign=True)
@@ -235,7 +244,7 @@ def format_change(change, change_pct, instrument, unit=None):
     return f"{base} ({format_number(change_pct, 2, use_sign=True)}%)"
 
 
-def build_as_of_label(date_str, market_session_label):
+def build_as_of_label(date_str: Optional[str], market_session_label: str) -> str:
     if not date_str:
         return "N/A"
     if market_session_label == "latest":
@@ -245,7 +254,56 @@ def build_as_of_label(date_str, market_session_label):
     return f"available close ({date_str})"
 
 
-def build_error_result(instrument, message):
+def infer_macro_signal_tag(key: str, direction: str) -> Optional[str]:
+    mapping = {
+        "sp500": {"up": "risk_on", "down": "risk_off"},
+        "nasdaq": {"up": "risk_on", "down": "risk_off"},
+        "dow_jones": {"up": "risk_on", "down": "risk_off"},
+        "taiex": {"up": "risk_on", "down": "risk_off"},
+        "vix": {"up": "risk_off", "down": "risk_on"},
+        "us10y": {"up": "rates_up", "down": "rates_down"},
+        "wti": {"up": "oil_up", "down": "oil_down"},
+        "gold": {"up": "gold_up", "down": "gold_down"},
+        "dxy": {"up": "usd_stronger", "down": "usd_weaker"},
+        "usd_twd": {"up": "usd_stronger_vs_twd", "down": "twd_stronger_vs_usd"},
+    }
+    return mapping.get(key, {}).get(direction)
+
+
+def infer_surprise_flag(asset_class: str, change_pct: Optional[float]) -> Optional[bool]:
+    if change_pct is None:
+        return None
+
+    thresholds = {
+        "equity_index": 1.5,
+        "volatility_index": 5.0,
+        "government_bond_yield": 1.0,
+        "commodity": 2.0,
+        "fx_index": 0.75,
+        "fx": 0.75,
+    }
+    threshold = thresholds.get(asset_class, 2.0)
+    return abs(change_pct) >= threshold
+
+
+def build_llm_hint(item: Dict[str, Any]) -> Optional[str]:
+    name = item.get("display_name")
+    direction = item.get("direction")
+    display_change = item.get("display_change")
+
+    if not name or not direction or display_change in {None, "N/A"}:
+        return None
+
+    if direction == "up":
+        return f"{name} moved higher: {display_change}."
+    if direction == "down":
+        return f"{name} moved lower: {display_change}."
+    if direction == "flat":
+        return f"{name} was broadly unchanged: {display_change}."
+    return None
+
+
+def build_error_result(instrument: Dict[str, Any], message: str) -> Dict[str, Any]:
     return {
         "status": "error",
         "display_name": instrument["display_name"],
@@ -259,7 +317,7 @@ def build_error_result(instrument, message):
     }
 
 
-def fetch_instrument(instrument):
+def fetch_instrument(key: str, instrument: Dict[str, Any]) -> Dict[str, Any]:
     symbol = instrument["symbol"]
     last_error = None
 
@@ -269,14 +327,13 @@ def fetch_instrument(instrument):
             hist = ticker.history(
                 period=DEFAULT_HISTORY_PERIOD,
                 auto_adjust=False,
-                actions=False
+                actions=False,
             )
 
             if hist.empty:
                 return build_error_result(instrument, "no data")
 
             hist = hist.dropna(subset=["Close"])
-
             if hist.empty:
                 return build_error_result(instrument, "no close data")
 
@@ -285,13 +342,14 @@ def fetch_instrument(instrument):
             latest_value, transformed_unit = transform_price(latest_raw, instrument)
 
             latest_date = hist.index[-1].strftime("%Y-%m-%d")
-            close = safe_round(latest_value, instrument.get("decimals", 2))
+            decimals = instrument.get("decimals", 2)
 
+            close = safe_round(latest_value, decimals)
             freshness_days = get_freshness_days(latest_date)
             is_latest_trading_day = infer_is_latest_trading_day(latest_date)
             market_session_label = infer_market_session_label(is_latest_trading_day)
 
-            result = {
+            result: Dict[str, Any] = {
                 "status": "ok",
                 "display_name": instrument["display_name"],
                 "symbol": symbol,
@@ -303,9 +361,12 @@ def fetch_instrument(instrument):
                 "unit": transformed_unit,
                 "date": latest_date,
                 "close": close,
+                "raw_close": safe_round(latest_raw, 6),
                 "freshness_days": freshness_days,
                 "is_latest_trading_day": is_latest_trading_day,
                 "market_session_label": market_session_label,
+                "display_close": format_close(close, instrument, transformed_unit),
+                "as_of_label": build_as_of_label(latest_date, market_session_label),
             }
 
             if len(hist) >= 2:
@@ -314,35 +375,42 @@ def fetch_instrument(instrument):
                 prev_value, _ = transform_price(prev_raw, instrument)
 
                 prev_date = hist.index[-2].strftime("%Y-%m-%d")
-                prev_close = safe_round(prev_value, instrument.get("decimals", 2))
+                prev_close = safe_round(prev_value, decimals)
+
                 change, change_pct = calculate_change_metrics(
-                    close,
-                    prev_close,
-                    price_digits=instrument.get("decimals", 2),
+                    close=close,
+                    prev_close=prev_close,
+                    price_digits=decimals,
                     pct_digits=2,
                 )
-
                 direction = infer_direction(change)
 
                 result.update({
                     "prev_date": prev_date,
                     "prev_close": prev_close,
+                    "raw_prev_close": safe_round(prev_raw, 6),
                     "change": change,
                     "change_pct": change_pct,
                     "direction": direction,
-                    "display_close": format_close(close, instrument, transformed_unit),
                     "display_change": format_change(change, change_pct, instrument, transformed_unit),
-                    "as_of_label": build_as_of_label(latest_date, market_session_label),
+                    "macro_signal_tag": infer_macro_signal_tag(key, direction),
+                    "surprise_flag": infer_surprise_flag(instrument["asset_class"], change_pct),
                 })
             else:
                 result.update({
+                    "prev_date": None,
+                    "prev_close": None,
+                    "raw_prev_close": None,
+                    "change": None,
+                    "change_pct": None,
                     "direction": "unknown",
-                    "display_close": format_close(close, instrument, transformed_unit),
                     "display_change": "N/A",
-                    "as_of_label": build_as_of_label(latest_date, market_session_label),
+                    "macro_signal_tag": None,
+                    "surprise_flag": None,
                     "warning": "only one valid trading day found; change metrics unavailable",
                 })
 
+            result["llm_hint"] = build_llm_hint(result)
             return result
 
         except Exception as e:
@@ -356,42 +424,109 @@ def fetch_instrument(instrument):
     )
 
 
-def build_summary_stats(market_data):
+def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     ok_items = [v for v in market_data.values() if v.get("status") == "ok"]
 
-    by_category = {}
+    by_category: Dict[str, int] = {}
+    surprise_count = 0
+
     for item in ok_items:
         cat = item.get("report_category", "uncategorized")
-        by_category.setdefault(cat, 0)
-        by_category[cat] += 1
+        by_category[cat] = by_category.get(cat, 0) + 1
+        if item.get("surprise_flag") is True:
+            surprise_count += 1
 
     return {
         "total_instruments": len(market_data),
         "ok_count": len(ok_items),
         "error_count": len(market_data) - len(ok_items),
+        "surprise_count": surprise_count,
         "category_counts": by_category,
     }
 
 
-def main():
-    market_data = {}
+def build_report_ready_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    ok_items = [v for v in market_data.values() if v.get("status") == "ok"]
+    ok_items = sorted(ok_items, key=lambda x: x.get("priority", 9999))
+
+    by_category: Dict[str, list] = {}
+    for item in ok_items:
+        cat = item.get("report_category", "uncategorized")
+        by_category.setdefault(cat, [])
+        by_category[cat].append({
+            "display_name": item.get("display_name"),
+            "display_close": item.get("display_close"),
+            "display_change": item.get("display_change"),
+            "as_of_label": item.get("as_of_label"),
+            "direction": item.get("direction"),
+            "macro_signal_tag": item.get("macro_signal_tag"),
+            "surprise_flag": item.get("surprise_flag"),
+            "llm_hint": item.get("llm_hint"),
+        })
+
+    return {
+        "ordered_keys": [
+            key for key, _ in sorted(
+                ((k, v) for k, v in market_data.items() if v.get("status") == "ok"),
+                key=lambda kv: kv[1].get("priority", 9999)
+            )
+        ],
+        "by_category": by_category,
+    }
+
+
+def build_taiwan_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    usd_twd_item = market_data.get("usd_twd", {})
+    usd_twd_spot = "N/A"
+
+    if usd_twd_item.get("status") == "ok":
+        usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
+
+    return {
+        "foreign_flow": {
+            "single_day": "N/A",
+            "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）"
+        },
+        "semiconductor_supply_chain": {
+            "core_logic": [
+                "AI需求強（持續）",
+                "能源與原物料成本上升（壓縮部分毛利）"
+            ],
+            "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大"
+        },
+        "fx": {
+            "usd_twd_spot": usd_twd_spot,
+            "assessment": [
+                "若油價上行 → USD 轉強",
+                "若風險偏好回升 → TWD 偏強"
+            ],
+            "base_case": "區間震盪機率 60%"
+        }
+    }
+
+
+def main() -> None:
+    market_data: Dict[str, Dict[str, Any]] = {}
 
     for key, instrument in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"]):
         print(f"Fetching {instrument['display_name']} ({instrument['symbol']})...")
-        result = fetch_instrument(instrument)
+        result = fetch_instrument(key, instrument)
         market_data[key] = result
         print(f"  -> {result}")
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "schema_version": "3.0",
+        "generated_at": get_now_utc_iso(),
+        "schema_version": "Z.1",
         "source": "Yahoo Finance via yfinance",
         "note": (
             "Each instrument contains the latest available close and previous valid close. "
             "Dates follow each instrument's own trading calendar. "
-            "display_close and display_change are preformatted for downstream report generation."
+            "display_close/display_change/as_of_label are preformatted for downstream report generation. "
+            "^TNX is transformed from Yahoo's quoted value into actual 10Y Treasury yield percent."
         ),
         "summary_stats": build_summary_stats(market_data),
+        "report_ready_view": build_report_ready_view(market_data),
+        "taiwan_view": build_taiwan_view(market_data),
         "market_data": market_data,
     }
 
