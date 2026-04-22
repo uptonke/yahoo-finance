@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-22T12:14:44.370487+00:00",
-  "schema_version": "A.7",
+  "generated_at": "2026-04-22T12:58:11.998956+00:00",
+  "schema_version": "A.8",
   "source_stack": [
     "Fed official sources",
     "ECB official sources",
@@ -11,36 +11,49 @@
     "fed": {
       "status": "ok",
       "display_name": "Fed",
-      "current_rate": "N/A",
+      "current_rate": "3.50% - 3.75%",
+      "current_rate_date": "2026-04-22",
       "next_meeting": "N/A",
       "market_pricing_path": "N/A",
       "sources": {
-        "current_rate_url": "https://www.federalreserve.gov/monetarypolicy.htm",
+        "lower_series_id": "DFEDTARL",
+        "upper_series_id": "DFEDTARU",
         "schedule_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
       },
-      "notes": [
-        "market_pricing_url not configured"
-      ]
+      "notes": [],
+      "detail": {
+        "lower_bound": "3.50%",
+        "upper_bound": "3.75%"
+      }
     },
     "ecb": {
       "status": "ok",
       "display_name": "ECB",
-      "current_rate": "50%",
-      "next_meeting": "2026-04-21",
-      "market_pricing_path": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n        <meta charset=\"utf-8\">        \n        <link rel=\"preload\" href=\"/shared/dist/fonts/opensans_fixed/OpenSans-Regular.woff2\" as=\"font\" crossorigin>\n        <link rel=\"preload\" href=\"/shared/dist/fonts/opensans_fixed/OpenSans-SemiBold.woff2\" as=\"font\" cro",
+      "current_rate": "MRR 2.15% / DFR 2.00% / MLFR 2.40%",
+      "current_rate_date": "2026-04-22",
+      "next_meeting": "N/A",
+      "market_pricing_path": "N/A",
       "sources": {
-        "current_rate_url": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+        "mrr_series_key": "D.U2.EUR.4F.KR.MRR_RT.LEV",
+        "dfr_series_key": "D.U2.EUR.4F.KR.DFR.LEV",
+        "mlfr_series_key": "D.U2.EUR.4F.KR.MLFR.LEV",
         "schedule_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
         "market_pricing_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html"
       },
-      "notes": []
+      "notes": [],
+      "detail": {
+        "mrr": "2.15%",
+        "dfr": "2.00%",
+        "mlfr": "2.40%"
+      }
     },
     "boj": {
       "status": "ok",
       "display_name": "BOJ",
-      "current_rate": "N/A",
+      "current_rate": "0.75%",
+      "current_rate_date": "N/A",
       "next_meeting": "N/A",
-      "market_pricing_path": "<!DOCTYPE html><html lang=\"en\">\r\n<head prefix=\"og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#\">\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta name=\"author\" content=\"\">\r\n<meta name=\"description\" content=\"\">\r\n<meta name=\"keywords\" content=",
+      "market_pricing_path": "N/A",
       "sources": {
         "current_rate_url": "https://www.boj.or.jp/en/",
         "schedule_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
@@ -52,14 +65,21 @@
       "status": "partial_error",
       "display_name": "PBOC",
       "current_rate": "N/A",
+      "current_rate_date": "N/A",
       "next_meeting": "N/A",
       "market_pricing_path": "N/A",
-      "sources": {},
+      "sources": {
+        "schedule_url": "https://www.pbc.gov.cn/en/3688229/3688311/3688329/index.html"
+      },
       "notes": [
-        "current_rate fetch failed: 404 Client Error: Not Found for url: https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html",
-        "schedule_url not configured",
-        "market_pricing_url not configured"
+        "current_rate fetch failed: 404 Client Error: Not Found for url: https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html"
       ]
     }
+  },
+  "quality_checks": {
+    "smoke_test_passed": true,
+    "stale_guard_passed": true,
+    "stale_market_items": [],
+    "stale_foreign_flow_items": []
   }
 }
