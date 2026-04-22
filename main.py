@@ -1076,29 +1076,58 @@ def extract_percent_from_text(text: str) -> Optional[str]:
 
 
 def extract_next_fed_meeting(text: str) -> Optional[str]:
-    flat = normalize_whitespace(text)
+    lines = [normalize_whitespace(line) for line in text.splitlines()]
+    lines = [line for line in lines if line]
+
     year = taipei_now().year
-
-    block_match = re.search(
-        rf"{year}\s+FOMC Meetings(.*?)(?:\* Meeting associated|{year + 1}\s+FOMC Meetings|$)",
-        flat,
-        re.I,
-    )
-    block = block_match.group(1) if block_match else flat
-
-    matches = re.findall(r"([A-Za-z]+)\s+(\d{1,2})-(\d{1,2})", block)
     today = taipei_now().date()
 
-    for month_name, _day1, day2 in matches:
-        month_num = MONTH_MAP.get(month_name.upper()[:3])
-        if not month_num:
+    start_idx = None
+    end_idx = None
+
+    for i, line in enumerate(lines):
+        if re.fullmatch(rf"#+\s*{year}\s+FOMC Meetings", line, re.I) or re.fullmatch(rf"{year}\s+FOMC Meetings", line, re.I):
+            start_idx = i
             continue
-        try:
-            meeting_date = datetime(year, month_num, int(day2)).date()
-        except Exception:
-            continue
-        if meeting_date >= today:
-            return meeting_date.isoformat()
+        if start_idx is not None and (
+            re.fullmatch(rf"#+\s*{year + 1}\s+FOMC Meetings", line, re.I)
+            or re.fullmatch(rf"{year + 1}\s+FOMC Meetings", line, re.I)
+            or re.fullmatch(rf"#+\s*{year - 1}\s+FOMC Meetings", line, re.I)
+        ):
+            end_idx = i
+            break
+
+    if start_idx is None:
+        return None
+
+    block = lines[start_idx:end_idx] if end_idx is not None else lines[start_idx:]
+
+    i = 0
+    while i < len(block):
+        month_line = block[i]
+        month_line_clean = month_line.replace("#", "").strip()
+        month_key = month_line_clean.upper().replace("/", " ")
+        month_parts = month_key.split()
+
+        month_num = None
+        for part in month_parts:
+            part3 = part[:3]
+            if part3 in MONTH_MAP:
+                month_num = MONTH_MAP[part3]
+                break
+
+        if month_num is not None and i + 1 < len(block):
+            next_line = block[i + 1]
+            m = re.search(r"(\d{1,2})-(\d{1,2})", next_line)
+            if m:
+                end_day = int(m.group(2))
+                try:
+                    meeting_date = datetime(year, month_num, end_day).date()
+                    if meeting_date >= today:
+                        return meeting_date.isoformat()
+                except Exception:
+                    pass
+        i += 1
 
     return None
 
@@ -1108,7 +1137,7 @@ def extract_next_ecb_meeting(text: str) -> Optional[str]:
     today = taipei_now().date()
 
     matches = re.findall(
-        r"(\d{2})/(\d{2})/(\d{4})\s+Governing Council of the ECB:\s+monetary policy meeting.*?Day 2",
+        r"(\d{2})/(\d{2})/(\d{4})\s+Governing Council of the ECB:\s+monetary policy meeting.*?\(Day 2\)",
         flat,
         re.I,
     )
@@ -1116,28 +1145,30 @@ def extract_next_ecb_meeting(text: str) -> Optional[str]:
     for day, month, year in matches:
         try:
             meeting_date = datetime(int(year), int(month), int(day)).date()
+            if meeting_date >= today:
+                return meeting_date.isoformat()
         except Exception:
             continue
-        if meeting_date >= today:
-            return meeting_date.isoformat()
 
     return None
-
 
 def extract_next_boj_meeting(text: str) -> Optional[str]:
     flat = normalize_whitespace(text)
     year = taipei_now().year
     today = taipei_now().date()
 
-    block_match = re.search(
-        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:{year - 1}|$)",
+    m = re.search(
+        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:Table\s*:\s*{year - 1}\s*Date of MPM Release Schedule|$)",
         flat,
         re.I,
     )
-    block = block_match.group(1) if block_match else flat
+    if not m:
+        return None
+
+    block = m.group(1)
 
     matches = re.findall(
-        r"([A-Za-z]{3,4})\.\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
+        r"([A-Za-z]{3,4})\.?\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
         block,
         re.I,
     )
@@ -1151,14 +1182,12 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
 
         try:
             meeting_date = datetime(year, month_num, int(day2)).date()
+            if meeting_date >= today:
+                return meeting_date.isoformat()
         except Exception:
             continue
 
-        if meeting_date >= today:
-            return meeting_date.isoformat()
-
     return None
-
 
 def extract_latest_pboc_meeting(text: str) -> Optional[str]:
     flat = normalize_whitespace(text)
@@ -1311,26 +1340,16 @@ def fetch_pboc_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "notes": [],
     }
 
-    try:
-        if cfg.get("current_rate_url"):
-            text = fetch_text(cfg["current_rate_url"])
-            parsed_rate = extract_percent_from_text(text)
-            if parsed_rate:
-                result["current_rate"] = parsed_rate
-            result["sources"]["current_rate_url"] = cfg["current_rate_url"]
-        else:
-            result["notes"].append("current_rate_url not configured; no verified structured English endpoint for current policy rate")
-    except Exception as e:
-        result["status"] = "partial_error"
-        result["notes"].append(f"current_rate fetch failed: {e}")
+    # PBOC 英文官網目前穩定可抓的是 MPC Meetings 列表；
+    # 當前政策利率不強行抓，避免 404 / 假解析
+    if cfg.get("current_rate_url"):
+        result["notes"].append("current_rate_url configured but skipped; no verified stable structured English endpoint for current PBOC policy rate")
 
     try:
         if cfg.get("schedule_url"):
             text = fetch_text(cfg["schedule_url"])
             latest_meeting = extract_latest_pboc_meeting(text)
             if latest_meeting:
-                # PBOC 英文頁通常是最近一次已召開會議，不是未來排程
-                result["next_meeting"] = "N/A"
                 result["current_rate_date"] = latest_meeting
                 result["notes"].append(f"latest MPC meeting observed: {latest_meeting}")
             result["sources"]["schedule_url"] = cfg["schedule_url"]
