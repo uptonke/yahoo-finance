@@ -16,36 +16,33 @@ jobs:
     timeout-minutes: 15
 
     env:
-      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
-      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+  TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+  FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
-      # Twelve Data symbols，可依實測再微調
-      TD_SP500_SYMBOL: "SPY"
-      TD_TAIEX_SYMBOL: "0050"
-      TD_TAIEX_EXCHANGE: "TWSE"
-      TD_WTI_SYMBOL: "WTI"
-      FRED_USDTWD_SERIES: "DEXTAUS"
+  TD_SP500_SYMBOL: "SPY"
+  TD_TAIEX_SYMBOL: "0050"
+  TD_TAIEX_EXCHANGE: "TWSE"
+  TD_WTI_SYMBOL: "WTI"
+  FRED_USDTWD_SERIES: "DEXTAUS"
 
-      # 台灣外資官方頁（先留空也可）
-      TWSE_FOREIGN_FLOW_URL: ""
-      TPEX_FOREIGN_FLOW_URL: ""
+  TWSE_FOREIGN_FLOW_URL: ""
+  TPEX_FOREIGN_FLOW_URL: ""
 
-      # 央行官方頁（先留空也可，之後再補）
-      FED_RATE_URL: ""
-      FED_SCHEDULE_URL: ""
-      FED_MARKET_PRICING_URL: ""
+  FED_RATE_URL: "https://www.federalreserve.gov/monetarypolicy.htm"
+  FED_SCHEDULE_URL: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  FED_MARKET_PRICING_URL: ""
 
-      ECB_RATE_URL: ""
-      ECB_SCHEDULE_URL: ""
-      ECB_MARKET_PRICING_URL: ""
+  ECB_RATE_URL: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html"
+  ECB_SCHEDULE_URL: "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html"
+  ECB_MARKET_PRICING_URL: "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html"
 
-      BOJ_RATE_URL: ""
-      BOJ_SCHEDULE_URL: ""
-      BOJ_MARKET_PRICING_URL: ""
+  BOJ_RATE_URL: "https://www.boj.or.jp/en/"
+  BOJ_SCHEDULE_URL: "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm"
+  BOJ_MARKET_PRICING_URL: "https://www.boj.or.jp/en/mopo/mpmdeci/state_2026/index.htm"
 
-      PBOC_RATE_URL: ""
-      PBOC_SCHEDULE_URL: ""
-      PBOC_MARKET_PRICING_URL: ""
+  PBOC_RATE_URL: "https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html"
+  PBOC_SCHEDULE_URL: ""
+  PBOC_MARKET_PRICING_URL: ""
 
     steps:
       - name: Checkout repo
