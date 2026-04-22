@@ -219,7 +219,25 @@ def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
 def fetch_text(url: str) -> str:
     resp = SESSION.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
-    return resp.text
+
+    content = resp.content
+    encodings_to_try = [
+        "utf-8",
+        resp.apparent_encoding,
+        resp.encoding,
+        "big5",
+        "cp950",
+    ]
+
+    for enc in encodings_to_try:
+        if not enc:
+            continue
+        try:
+            return content.decode(enc)
+        except Exception:
+            continue
+
+    return content.decode("utf-8", errors="replace")
 
 
 def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
@@ -512,8 +530,9 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
     date_value = extract_first_match(
         flat,
         [
-            r"資料日期[:：]\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
-            r"Date[:：]\s*([0-9]{4}/[0-9]{1,2}/[0-9]{1,2})",
+            r"資料日期[:：]?\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
+            r"日期[:：]?\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
+            r"Date[:：]?\s*([0-9]{4}/[0-9]{1,2}/[0-9]{1,2})",
             r"([0-9]{4}/[0-9]{2}/[0-9]{2})",
         ],
     )
@@ -523,6 +542,7 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
         [
             r"外資及陸資淨買股數[^0-9\-]*([\-]?[0-9,]+)",
             r"外資及陸資買賣超股數[^0-9\-]*([\-]?[0-9,]+)",
+            r"外資及陸資買賣超[^0-9\-]*([\-]?[0-9,]+)",
             r"外資買賣超[^0-9\-]*([\-]?[0-9,]+)",
             r"Foreign[^0-9\-]{0,80}Net Buy[^0-9\-]*([\-]?[0-9,]+)",
         ],
@@ -530,7 +550,7 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
 
     snippet = None
     snippet_match = re.search(
-        r"(外資.{0,200}(?:淨買|買賣超).{0,120})",
+        r"(外資.{0,250}?(?:淨買|買賣超).{0,120})",
         flat,
         re.S,
     )
@@ -544,7 +564,7 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
         "source": "official_page_html",
         "title": title,
         "snippet": snippet,
-        "note": "Parsed from official page HTML with regex; may need API/CSV if page is JS-rendered.",
+        "note": "Parsed from official page HTML with regex; may need API/CSV if page structure changes.",
     }
 
 
@@ -801,7 +821,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.4",
+        "schema_version": "A.5",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -817,7 +837,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.4",
+        "schema_version": "A.5",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
