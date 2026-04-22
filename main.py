@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import csv
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -123,26 +124,45 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
 CENTRAL_BANK_SOURCE_CONFIG = {
     "fed": {
         "display_name": "Fed",
-        "current_rate_url": os.getenv("FED_RATE_URL", "").strip(),
-        "schedule_url": os.getenv("FED_SCHEDULE_URL", "").strip(),
+        "provider": "fed_structured",
+        "lower_series_id": os.getenv("FED_LOWER_SERIES_ID", "DFEDTARL").strip(),
+        "upper_series_id": os.getenv("FED_UPPER_SERIES_ID", "DFEDTARU").strip(),
+        "schedule_url": os.getenv(
+            "FED_SCHEDULE_URL",
+            "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        ).strip(),
         "market_pricing_url": os.getenv("FED_MARKET_PRICING_URL", "").strip(),
     },
     "ecb": {
         "display_name": "ECB",
-        "current_rate_url": os.getenv("ECB_RATE_URL", "").strip(),
-        "schedule_url": os.getenv("ECB_SCHEDULE_URL", "").strip(),
+        "provider": "ecb_structured",
+        "mrr_series_key": os.getenv("ECB_MRR_SERIES_KEY", "D.U2.EUR.4F.KR.MRR_RT.LEV").strip(),
+        "dfr_series_key": os.getenv("ECB_DFR_SERIES_KEY", "D.U2.EUR.4F.KR.DFR.LEV").strip(),
+        "mlfr_series_key": os.getenv("ECB_MLFR_SERIES_KEY", "D.U2.EUR.4F.KR.MLFR.LEV").strip(),
+        "schedule_url": os.getenv(
+            "ECB_SCHEDULE_URL",
+            "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+        ).strip(),
         "market_pricing_url": os.getenv("ECB_MARKET_PRICING_URL", "").strip(),
     },
     "boj": {
         "display_name": "BOJ",
+        "provider": "boj_hybrid_official",
         "current_rate_url": os.getenv("BOJ_RATE_URL", "").strip(),
-        "schedule_url": os.getenv("BOJ_SCHEDULE_URL", "").strip(),
+        "schedule_url": os.getenv(
+            "BOJ_SCHEDULE_URL",
+            "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+        ).strip(),
         "market_pricing_url": os.getenv("BOJ_MARKET_PRICING_URL", "").strip(),
     },
     "pboc": {
         "display_name": "PBOC",
+        "provider": "pboc_hybrid_official",
         "current_rate_url": os.getenv("PBOC_RATE_URL", "").strip(),
-        "schedule_url": os.getenv("PBOC_SCHEDULE_URL", "").strip(),
+        "schedule_url": os.getenv(
+            "PBOC_SCHEDULE_URL",
+            "https://www.pbc.gov.cn/en/3688229/3688311/3688329/index.html",
+        ).strip(),
         "market_pricing_url": os.getenv("PBOC_MARKET_PRICING_URL", "").strip(),
     },
 }
@@ -949,25 +969,298 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
     }
 
 # =========================================================
-# 7. 央行動態（骨架）
+# 7. 央行動態（升級版：Fed/ECB 結構化；BOJ/PBOC 官方混合）
 # =========================================================
 
 
-def extract_basic_rate_and_date_from_text(text: str) -> Dict[str, Any]:
-    rate_match = re.search(r"(\d+(?:\.\d+)?)\s?%", text)
-    date_match = re.search(r"(\d{4}-\d{2}-\d{2})", text)
+MONTH_MAP = {
+    "JAN": 1,
+    "FEB": 2,
+    "MAR": 3,
+    "APR": 4,
+    "MAY": 5,
+    "JUN": 6,
+    "JUL": 7,
+    "AUG": 8,
+    "SEP": 9,
+    "SEPT": 9,
+    "OCT": 10,
+    "NOV": 11,
+    "DEC": 12,
+}
 
+
+def parse_iso_date(date_str: Optional[str]) -> Optional[datetime.date]:
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def fetch_fred_latest_observation(series_id: str) -> Dict[str, Any]:
+    payload = fetch_fred_series_observations(series_id)
+    observations = payload.get("observations", [])
+    valid = []
+
+    for obs in observations:
+        value = safe_float(obs.get("value"))
+        if value is None:
+            continue
+        valid.append(
+            {
+                "date": obs.get("date"),
+                "value": value,
+            }
+        )
+
+    if not valid:
+        raise RuntimeError(f"FRED series {series_id} has no valid observations")
+
+    latest = valid[-1]
     return {
-        "current_rate": rate_match.group(1) + "%" if rate_match else "N/A",
-        "next_meeting": date_match.group(1) if date_match else "N/A",
+        "date": latest["date"],
+        "value": latest["value"],
+        "series_id": series_id,
     }
 
 
-def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
+def fetch_ecb_latest_observation(series_key: str) -> Dict[str, Any]:
+    url = f"https://data-api.ecb.europa.eu/service/data/FM/{series_key}"
+    headers = {"Accept": "text/csv"}
+    resp = SESSION.get(
+        url,
+        params={"lastNObservations": 1},
+        headers=headers,
+        timeout=REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+
+    lines = [line for line in resp.text.splitlines() if line.strip()]
+    if len(lines) < 2:
+        raise RuntimeError(f"ECB series {series_key} returned empty CSV")
+
+    reader = csv.DictReader(lines)
+    rows = list(reader)
+    if not rows:
+        raise RuntimeError(f"ECB series {series_key} has no rows")
+
+    row = rows[-1]
+    value = safe_float(row.get("OBS_VALUE"))
+    date_str = row.get("TIME_PERIOD")
+
+    if value is None or not date_str:
+        raise RuntimeError(f"ECB series {series_key} missing OBS_VALUE/TIME_PERIOD")
+
+    return {
+        "date": normalize_to_iso_date(date_str),
+        "value": value,
+        "series_key": series_key,
+    }
+
+
+def extract_percent_from_text(text: str) -> Optional[str]:
+    flat = normalize_whitespace(text)
+
+    patterns = [
+        r"around\s+(\d+(?:\.\d+)?)\s*percent",
+        r"(\d+(?:\.\d+)?)\s*percent",
+        r"(\d+(?:\.\d+)?)\s*%",
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, flat, re.I)
+        if m:
+            return f"{m.group(1)}%"
+    return None
+
+
+def extract_next_fed_meeting(text: str) -> Optional[str]:
+    flat = normalize_whitespace(text)
+    year = taipei_now().year
+
+    block_match = re.search(
+        rf"{year}\s+FOMC Meetings(.*?)(?:\* Meeting associated|{year + 1}\s+FOMC Meetings|$)",
+        flat,
+        re.I,
+    )
+    block = block_match.group(1) if block_match else flat
+
+    matches = re.findall(r"([A-Za-z]+)\s+(\d{1,2})-(\d{1,2})", block)
+    today = taipei_now().date()
+
+    for month_name, _day1, day2 in matches:
+        month_num = MONTH_MAP.get(month_name.upper()[:3])
+        if not month_num:
+            continue
+        try:
+            meeting_date = datetime(year, month_num, int(day2)).date()
+        except Exception:
+            continue
+        if meeting_date >= today:
+            return meeting_date.isoformat()
+
+    return None
+
+
+def extract_next_ecb_meeting(text: str) -> Optional[str]:
+    flat = normalize_whitespace(text)
+    today = taipei_now().date()
+
+    matches = re.findall(
+        r"(\d{2})/(\d{2})/(\d{4})\s+Governing Council of the ECB:\s+monetary policy meeting.*?Day 2",
+        flat,
+        re.I,
+    )
+
+    for day, month, year in matches:
+        try:
+            meeting_date = datetime(int(year), int(month), int(day)).date()
+        except Exception:
+            continue
+        if meeting_date >= today:
+            return meeting_date.isoformat()
+
+    return None
+
+
+def extract_next_boj_meeting(text: str) -> Optional[str]:
+    flat = normalize_whitespace(text)
+    year = taipei_now().year
+    today = taipei_now().date()
+
+    block_match = re.search(
+        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:{year - 1}|$)",
+        flat,
+        re.I,
+    )
+    block = block_match.group(1) if block_match else flat
+
+    matches = re.findall(
+        r"([A-Za-z]{3,4})\.\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
+        block,
+        re.I,
+    )
+
+    for month_name, _day1, day2 in matches:
+        month_num = MONTH_MAP.get(month_name.upper())
+        if not month_num:
+            month_num = MONTH_MAP.get(month_name.upper()[:3])
+        if not month_num:
+            continue
+
+        try:
+            meeting_date = datetime(year, month_num, int(day2)).date()
+        except Exception:
+            continue
+
+        if meeting_date >= today:
+            return meeting_date.isoformat()
+
+    return None
+
+
+def extract_latest_pboc_meeting(text: str) -> Optional[str]:
+    flat = normalize_whitespace(text)
+    m = re.search(
+        r"(\d{4}-\d{2}-\d{2})\s+PBOC Monetary Policy Committee Holds",
+        flat,
+        re.I,
+    )
+    if not m:
+        return None
+    return normalize_to_iso_date(m.group(1))
+
+
+def fetch_fed_structured_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    lower = fetch_fred_latest_observation(cfg["lower_series_id"])
+    upper = fetch_fred_latest_observation(cfg["upper_series_id"])
+
+    next_meeting = "N/A"
+    notes = []
+    sources = {
+        "lower_series_id": cfg["lower_series_id"],
+        "upper_series_id": cfg["upper_series_id"],
+    }
+
+    try:
+        if cfg.get("schedule_url"):
+            text = fetch_text(cfg["schedule_url"])
+            parsed = extract_next_fed_meeting(text)
+            next_meeting = parsed or "N/A"
+            sources["schedule_url"] = cfg["schedule_url"]
+    except Exception as e:
+        notes.append(f"schedule fetch failed: {e}")
+
+    market_pricing_path = "N/A"
+    if cfg.get("market_pricing_url"):
+        sources["market_pricing_url"] = cfg["market_pricing_url"]
+
+    return {
+        "status": "ok",
+        "display_name": cfg["display_name"],
+        "current_rate": f"{lower['value']:.2f}% - {upper['value']:.2f}%",
+        "current_rate_date": lower["date"],
+        "next_meeting": next_meeting,
+        "market_pricing_path": market_pricing_path,
+        "sources": sources,
+        "notes": notes,
+        "detail": {
+            "lower_bound": f"{lower['value']:.2f}%",
+            "upper_bound": f"{upper['value']:.2f}%",
+        },
+    }
+
+
+def fetch_ecb_structured_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    mrr = fetch_ecb_latest_observation(cfg["mrr_series_key"])
+    dfr = fetch_ecb_latest_observation(cfg["dfr_series_key"])
+    mlfr = fetch_ecb_latest_observation(cfg["mlfr_series_key"])
+
+    next_meeting = "N/A"
+    notes = []
+    sources = {
+        "mrr_series_key": cfg["mrr_series_key"],
+        "dfr_series_key": cfg["dfr_series_key"],
+        "mlfr_series_key": cfg["mlfr_series_key"],
+    }
+
+    try:
+        if cfg.get("schedule_url"):
+            text = fetch_text(cfg["schedule_url"])
+            parsed = extract_next_ecb_meeting(text)
+            next_meeting = parsed or "N/A"
+            sources["schedule_url"] = cfg["schedule_url"]
+    except Exception as e:
+        notes.append(f"schedule fetch failed: {e}")
+
+    market_pricing_path = "N/A"
+    if cfg.get("market_pricing_url"):
+        sources["market_pricing_url"] = cfg["market_pricing_url"]
+
+    return {
+        "status": "ok",
+        "display_name": cfg["display_name"],
+        "current_rate": f"MRR {mrr['value']:.2f}% / DFR {dfr['value']:.2f}% / MLFR {mlfr['value']:.2f}%",
+        "current_rate_date": mrr["date"],
+        "next_meeting": next_meeting,
+        "market_pricing_path": market_pricing_path,
+        "sources": sources,
+        "notes": notes,
+        "detail": {
+            "mrr": f"{mrr['value']:.2f}%",
+            "dfr": f"{dfr['value']:.2f}%",
+            "mlfr": f"{mlfr['value']:.2f}%",
+        },
+    }
+
+
+def fetch_boj_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
     result = {
         "status": "ok",
         "display_name": cfg["display_name"],
         "current_rate": "N/A",
+        "current_rate_date": "N/A",
         "next_meeting": "N/A",
         "market_pricing_path": "N/A",
         "sources": {},
@@ -977,11 +1270,12 @@ def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     try:
         if cfg.get("current_rate_url"):
             text = fetch_text(cfg["current_rate_url"])
-            parsed = extract_basic_rate_and_date_from_text(text)
-            result["current_rate"] = parsed.get("current_rate", "N/A")
+            parsed_rate = extract_percent_from_text(text)
+            if parsed_rate:
+                result["current_rate"] = parsed_rate
             result["sources"]["current_rate_url"] = cfg["current_rate_url"]
         else:
-            result["notes"].append("current_rate_url not configured")
+            result["notes"].append("current_rate_url not configured; BOJ policy target remains statement-driven")
     except Exception as e:
         result["status"] = "partial_error"
         result["notes"].append(f"current_rate fetch failed: {e}")
@@ -989,9 +1283,9 @@ def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     try:
         if cfg.get("schedule_url"):
             text = fetch_text(cfg["schedule_url"])
-            parsed = extract_basic_rate_and_date_from_text(text)
-            if parsed.get("next_meeting") != "N/A":
-                result["next_meeting"] = parsed["next_meeting"]
+            parsed_meeting = extract_next_boj_meeting(text)
+            if parsed_meeting:
+                result["next_meeting"] = parsed_meeting
             result["sources"]["schedule_url"] = cfg["schedule_url"]
         else:
             result["notes"].append("schedule_url not configured")
@@ -999,18 +1293,93 @@ def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
         result["status"] = "partial_error"
         result["notes"].append(f"schedule fetch failed: {e}")
 
-    try:
-        if cfg.get("market_pricing_url"):
-            text = fetch_text(cfg["market_pricing_url"])
-            result["market_pricing_path"] = text[:300].strip() if text else "N/A"
-            result["sources"]["market_pricing_url"] = cfg["market_pricing_url"]
-        else:
-            result["notes"].append("market_pricing_url not configured")
-    except Exception as e:
-        result["status"] = "partial_error"
-        result["notes"].append(f"market pricing fetch failed: {e}")
+    if cfg.get("market_pricing_url"):
+        result["sources"]["market_pricing_url"] = cfg["market_pricing_url"]
 
     return result
+
+
+def fetch_pboc_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    result = {
+        "status": "ok",
+        "display_name": cfg["display_name"],
+        "current_rate": "N/A",
+        "current_rate_date": "N/A",
+        "next_meeting": "N/A",
+        "market_pricing_path": "N/A",
+        "sources": {},
+        "notes": [],
+    }
+
+    try:
+        if cfg.get("current_rate_url"):
+            text = fetch_text(cfg["current_rate_url"])
+            parsed_rate = extract_percent_from_text(text)
+            if parsed_rate:
+                result["current_rate"] = parsed_rate
+            result["sources"]["current_rate_url"] = cfg["current_rate_url"]
+        else:
+            result["notes"].append("current_rate_url not configured; no verified structured English endpoint for current policy rate")
+    except Exception as e:
+        result["status"] = "partial_error"
+        result["notes"].append(f"current_rate fetch failed: {e}")
+
+    try:
+        if cfg.get("schedule_url"):
+            text = fetch_text(cfg["schedule_url"])
+            latest_meeting = extract_latest_pboc_meeting(text)
+            if latest_meeting:
+                # PBOC 英文頁通常是最近一次已召開會議，不是未來排程
+                result["next_meeting"] = "N/A"
+                result["current_rate_date"] = latest_meeting
+                result["notes"].append(f"latest MPC meeting observed: {latest_meeting}")
+            result["sources"]["schedule_url"] = cfg["schedule_url"]
+        else:
+            result["notes"].append("schedule_url not configured")
+    except Exception as e:
+        result["status"] = "partial_error"
+        result["notes"].append(f"schedule fetch failed: {e}")
+
+    if cfg.get("market_pricing_url"):
+        result["sources"]["market_pricing_url"] = cfg["market_pricing_url"]
+
+    return result
+
+
+def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
+    provider = cfg.get("provider")
+
+    try:
+        if provider == "fed_structured":
+            return fetch_fed_structured_block(cfg)
+        if provider == "ecb_structured":
+            return fetch_ecb_structured_block(cfg)
+        if provider == "boj_hybrid_official":
+            return fetch_boj_hybrid_block(cfg)
+        if provider == "pboc_hybrid_official":
+            return fetch_pboc_hybrid_block(cfg)
+
+        return {
+            "status": "error",
+            "display_name": cfg["display_name"],
+            "current_rate": "N/A",
+            "current_rate_date": "N/A",
+            "next_meeting": "N/A",
+            "market_pricing_path": "N/A",
+            "sources": {},
+            "notes": [f"unsupported provider: {provider}"],
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "display_name": cfg["display_name"],
+            "current_rate": "N/A",
+            "current_rate_date": "N/A",
+            "next_meeting": "N/A",
+            "market_pricing_path": "N/A",
+            "sources": {},
+            "notes": [str(e)],
+        }
 
 
 def fetch_all_central_banks() -> Dict[str, Any]:
