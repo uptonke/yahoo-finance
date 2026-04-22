@@ -1,0 +1,150 @@
+{
+  "generated_at": "2026-04-22T00:31:27.179782+00:00",
+  "schema_version": "Z.1",
+  "source": "Yahoo Finance via yfinance",
+  "note": "Each instrument contains the latest available close and previous valid close. Dates follow each instrument's own trading calendar. display_close/display_change/as_of_label are preformatted for downstream report generation. ^TNX is transformed from Yahoo's quoted value into actual 10Y Treasury yield percent.",
+  "summary_stats": {
+    "total_instruments": 10,
+    "ok_count": 0,
+    "error_count": 10,
+    "surprise_count": 0,
+    "category_counts": {}
+  },
+  "report_ready_view": {
+    "ordered_keys": [],
+    "by_category": {}
+  },
+  "taiwan_view": {
+    "foreign_flow": {
+      "single_day": "N/A",
+      "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）"
+    },
+    "semiconductor_supply_chain": {
+      "core_logic": [
+        "AI需求強（持續）",
+        "能源與原物料成本上升（壓縮部分毛利）"
+      ],
+      "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大"
+    },
+    "fx": {
+      "usd_twd_spot": "N/A",
+      "assessment": [
+        "若油價上行 → USD 轉強",
+        "若風險偏好回升 → TWD 偏強"
+      ],
+      "base_case": "區間震盪機率 60%"
+    }
+  },
+  "market_data": {
+    "sp500": {
+      "status": "error",
+      "display_name": "S&P 500",
+      "symbol": "^GSPC",
+      "asset_class": "equity_index",
+      "report_category": "equities",
+      "market": "US",
+      "currency": "USD",
+      "priority": 10,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "nasdaq": {
+      "status": "error",
+      "display_name": "NASDAQ Composite",
+      "symbol": "^IXIC",
+      "asset_class": "equity_index",
+      "report_category": "equities",
+      "market": "US",
+      "currency": "USD",
+      "priority": 20,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "dow_jones": {
+      "status": "error",
+      "display_name": "Dow Jones Industrial Average",
+      "symbol": "^DJI",
+      "asset_class": "equity_index",
+      "report_category": "equities",
+      "market": "US",
+      "currency": "USD",
+      "priority": 30,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "vix": {
+      "status": "error",
+      "display_name": "CBOE Volatility Index",
+      "symbol": "^VIX",
+      "asset_class": "volatility_index",
+      "report_category": "risk",
+      "market": "US",
+      "currency": "INDEX_POINTS",
+      "priority": 40,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "taiex": {
+      "status": "error",
+      "display_name": "TAIEX",
+      "symbol": "^TWII",
+      "asset_class": "equity_index",
+      "report_category": "equities",
+      "market": "TW",
+      "currency": "TWD",
+      "priority": 50,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "us10y": {
+      "status": "error",
+      "display_name": "US 10Y Treasury Yield",
+      "symbol": "^TNX",
+      "asset_class": "government_bond_yield",
+      "report_category": "rates",
+      "market": "US",
+      "currency": "PERCENT",
+      "priority": 60,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "wti": {
+      "status": "error",
+      "display_name": "WTI Crude Oil",
+      "symbol": "CL=F",
+      "asset_class": "commodity",
+      "report_category": "commodities",
+      "market": "GLOBAL",
+      "currency": "USD",
+      "priority": 70,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "gold": {
+      "status": "error",
+      "display_name": "Gold",
+      "symbol": "GC=F",
+      "asset_class": "commodity",
+      "report_category": "commodities",
+      "market": "GLOBAL",
+      "currency": "USD",
+      "priority": 80,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "dxy": {
+      "status": "error",
+      "display_name": "US Dollar Index",
+      "symbol": "DX-Y.NYB",
+      "asset_class": "fx_index",
+      "report_category": "fx",
+      "market": "US",
+      "currency": "INDEX_POINTS",
+      "priority": 90,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    },
+    "usd_twd": {
+      "status": "error",
+      "display_name": "USD/TWD",
+      "symbol": "TWD=X",
+      "asset_class": "fx",
+      "report_category": "fx",
+      "market": "FX",
+      "currency": "TWD_PER_USD",
+      "priority": 100,
+      "error": "fetch failed after 3 retries: Too Many Requests. Rate limited. Try after a while."
+    }
+  }
+}
