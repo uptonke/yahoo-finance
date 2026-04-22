@@ -14,6 +14,8 @@ from urllib3.util.retry import Retry
 # 0. 基本設定
 # =========================================================
 
+SCHEMA_VERSION = "A.8"
+
 OUTPUT_DIR = Path("data")
 MARKET_OUTPUT_FILE = OUTPUT_DIR / "market_data.json"
 CENTRAL_BANK_OUTPUT_FILE = OUTPUT_DIR / "central_bank_data.json"
@@ -23,6 +25,9 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
 
 REQUEST_TIMEOUT = 20
 MIN_REQUIRED_OK_COUNT = 4
+
+DEFAULT_MAX_STALENESS_DAYS = 5
+FOREIGN_FLOW_MAX_STALENESS_DAYS = 5
 
 logging.basicConfig(
     level=logging.INFO,
@@ -142,9 +147,6 @@ CENTRAL_BANK_SOURCE_CONFIG = {
     },
 }
 
-TW_TWSE_URL = os.getenv("TWSE_FOREIGN_FLOW_URL", "").strip()
-TW_TPEX_URL = os.getenv("TPEX_FOREIGN_FLOW_URL", "").strip()
-
 TWSE_FOREIGN_FLOW_API_URL = os.getenv(
     "TWSE_FOREIGN_FLOW_API_URL",
     "https://www.twse.com.tw/rwd/zh/fund/T86",
@@ -194,6 +196,10 @@ SESSION = build_session()
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def taipei_now() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(hours=8)
 
 
 def safe_float(value: Any) -> Optional[float]:
@@ -265,7 +271,6 @@ def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
-
 
 # =========================================================
 # 3. 通用 market helpers
@@ -398,15 +403,6 @@ def build_ok_result(
 def normalize_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
-
-def extract_first_match(text: str, patterns: list[str]) -> Optional[str]:
-    for pattern in patterns:
-        match = re.search(pattern, text, re.S | re.I)
-        if match:
-            return normalize_whitespace(match.group(1))
-    return None
-
-
 # =========================================================
 # 4. Twelve Data
 # =========================================================
@@ -473,7 +469,6 @@ def fetch_market_from_twelve_data(key: str, cfg: Dict[str, Any]) -> Dict[str, An
     except Exception as e:
         return build_error_result(cfg, f"Twelve Data fetch failed: {e}")
 
-
 # =========================================================
 # 5. FRED
 # =========================================================
@@ -529,7 +524,6 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
         return parse_fred_series(cfg, payload)
     except Exception as e:
         return build_error_result(cfg, f"FRED fetch failed: {e}")
-
 
 # =========================================================
 # 6. 台灣外資動向
@@ -608,8 +602,7 @@ def build_foreign_flow_structural_read(single_day_raw: Optional[int]) -> str:
 
 
 def taipei_today_yyyymmdd() -> str:
-    dt = datetime.now(timezone.utc) + timedelta(hours=8)
-    return dt.strftime("%Y%m%d")
+    return taipei_now().strftime("%Y%m%d")
 
 
 def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
@@ -955,7 +948,6 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
         },
     }
 
-
 # =========================================================
 # 7. 央行動態（骨架）
 # =========================================================
@@ -1027,9 +1019,121 @@ def fetch_all_central_banks() -> Dict[str, Any]:
         out[key] = fetch_central_bank_block(key, cfg)
     return out
 
+# =========================================================
+# 8. Hardening: smoke test + stale protection
+# =========================================================
+
+
+def parse_iso_date(date_str: Optional[str]) -> Optional[datetime.date]:
+    normalized = normalize_to_iso_date(date_str)
+    if not normalized:
+        return None
+    try:
+        return datetime.strptime(normalized, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def days_old_from_taipei(date_str: Optional[str]) -> Optional[int]:
+    d = parse_iso_date(date_str)
+    if d is None:
+        return None
+    return (taipei_now().date() - d).days
+
+
+def max_staleness_days_for_market(item: Dict[str, Any]) -> int:
+    market = str(item.get("market", "")).upper()
+    if market in {"US", "GLOBAL", "FX", "TW"}:
+        return DEFAULT_MAX_STALENESS_DAYS
+    return DEFAULT_MAX_STALENESS_DAYS
+
+
+def collect_stale_market_items(market_data: Dict[str, Dict[str, Any]]) -> list[Dict[str, Any]]:
+    stale_items: list[Dict[str, Any]] = []
+
+    for key, item in market_data.items():
+        if item.get("status") != "ok":
+            continue
+        if not item.get("required", True):
+            continue
+
+        days_old = days_old_from_taipei(item.get("date"))
+        max_days = max_staleness_days_for_market(item)
+
+        if days_old is None or days_old > max_days:
+            stale_items.append(
+                {
+                    "key": key,
+                    "display_name": item.get("display_name"),
+                    "date": item.get("date"),
+                    "days_old": days_old,
+                    "max_allowed_days": max_days,
+                }
+            )
+
+    return stale_items
+
+
+def collect_stale_foreign_flow_items(foreign_flow_payload: Dict[str, Any]) -> list[Dict[str, Any]]:
+    stale_items: list[Dict[str, Any]] = []
+
+    for source_key in ["twse", "tpex"]:
+        item = foreign_flow_payload.get(source_key, {})
+        if item.get("status") != "ok":
+            continue
+
+        days_old = days_old_from_taipei(item.get("date"))
+        if days_old is None or days_old > FOREIGN_FLOW_MAX_STALENESS_DAYS:
+            stale_items.append(
+                {
+                    "source": source_key,
+                    "date": item.get("date"),
+                    "days_old": days_old,
+                    "max_allowed_days": FOREIGN_FLOW_MAX_STALENESS_DAYS,
+                }
+            )
+
+    return stale_items
+
+
+def build_quality_checks(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
+    foreign_flow_payload = taiwan_view.get("foreign_flow", {}).get("source_payload", {})
+    stale_market_items = collect_stale_market_items(market_data)
+    stale_foreign_flow_items = collect_stale_foreign_flow_items(foreign_flow_payload)
+    single_day_raw = taiwan_view.get("foreign_flow", {}).get("single_day_raw")
+
+    return {
+        "smoke_test_passed": False,
+        "stale_guard_passed": len(stale_market_items) == 0 and len(stale_foreign_flow_items) == 0,
+        "stale_market_items": stale_market_items,
+        "stale_foreign_flow_items": stale_foreign_flow_items,
+        "foreign_flow_single_day_raw_type": type(single_day_raw).__name__ if single_day_raw is not None else "NoneType",
+    }
+
+
+def run_smoke_tests(market_output: Dict[str, Any], central_bank_output: Dict[str, Any]) -> None:
+    if market_output.get("schema_version") != SCHEMA_VERSION:
+        raise RuntimeError(
+            f"market_output schema_version mismatch: {market_output.get('schema_version')} != {SCHEMA_VERSION}"
+        )
+
+    if central_bank_output.get("schema_version") != SCHEMA_VERSION:
+        raise RuntimeError(
+            f"central_bank_output schema_version mismatch: {central_bank_output.get('schema_version')} != {SCHEMA_VERSION}"
+        )
+
+    required_ok_count = market_output.get("summary_stats", {}).get("required_ok_count")
+    if not isinstance(required_ok_count, int):
+        raise RuntimeError("required_ok_count is missing or not int")
+
+    foreign_flow_raw = market_output.get("taiwan_view", {}).get("foreign_flow", {}).get("single_day_raw")
+    if foreign_flow_raw is not None and not isinstance(foreign_flow_raw, int):
+        raise RuntimeError(
+            f"foreign_flow.single_day_raw must be int or None, got {type(foreign_flow_raw).__name__}"
+        )
 
 # =========================================================
-# 8. 組裝輸出
+# 9. 組裝輸出
 # =========================================================
 
 
@@ -1109,7 +1213,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.7",
+        "schema_version": SCHEMA_VERSION,
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -1125,7 +1229,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.7",
+        "schema_version": SCHEMA_VERSION,
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
@@ -1135,14 +1239,13 @@ def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, An
         "central_banks": central_bank_data,
     }
 
-
 # =========================================================
-# 9. main
+# 10. main
 # =========================================================
 
 
 def main() -> None:
-    logger.info("Starting scheme A pipeline...")
+    logger.info("Starting hardened scheme pipeline...")
 
     market_data = fetch_market_data()
     foreign_flow_payload = fetch_tw_foreign_flow()
@@ -1151,6 +1254,15 @@ def main() -> None:
 
     market_output = build_market_output(market_data, taiwan_view)
     central_bank_output = build_central_bank_output(central_bank_data)
+
+    quality_checks = build_quality_checks(market_data, taiwan_view)
+    market_output["quality_checks"] = quality_checks
+    central_bank_output["quality_checks"] = {
+        "smoke_test_passed": False,
+        "stale_guard_passed": quality_checks["stale_guard_passed"],
+        "stale_market_items": quality_checks["stale_market_items"],
+        "stale_foreign_flow_items": quality_checks["stale_foreign_flow_items"],
+    }
 
     failed_items = {
         k: v for k, v in market_data.items()
@@ -1162,11 +1274,31 @@ def main() -> None:
             json.dumps(failed_items, ensure_ascii=False, indent=2),
         )
 
+    if quality_checks["stale_market_items"]:
+        logger.error(
+            "Stale required market items: %s",
+            json.dumps(quality_checks["stale_market_items"], ensure_ascii=False, indent=2),
+        )
+
+    if quality_checks["stale_foreign_flow_items"]:
+        logger.error(
+            "Stale foreign flow items: %s",
+            json.dumps(quality_checks["stale_foreign_flow_items"], ensure_ascii=False, indent=2),
+        )
+
+    run_smoke_tests(market_output, central_bank_output)
+
     required_ok_count = market_output["summary_stats"]["required_ok_count"]
     if required_ok_count < MIN_REQUIRED_OK_COUNT:
         raise RuntimeError(
             f"required_ok_count ({required_ok_count}) < MIN_REQUIRED_OK_COUNT ({MIN_REQUIRED_OK_COUNT}); refuse to write incomplete snapshot"
         )
+
+    if not quality_checks["stale_guard_passed"]:
+        raise RuntimeError("stale_guard failed; refuse to overwrite previous snapshot")
+
+    market_output["quality_checks"]["smoke_test_passed"] = True
+    central_bank_output["quality_checks"]["smoke_test_passed"] = True
 
     atomic_write_json(MARKET_OUTPUT_FILE, market_output)
     atomic_write_json(CENTRAL_BANK_OUTPUT_FILE, central_bank_output)
