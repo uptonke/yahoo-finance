@@ -724,7 +724,13 @@ def main() -> None:
 
     market_output = build_market_output(market_data, taiwan_view)
     central_bank_output = build_central_bank_output(central_bank_data)
-
+    
+failed_items = {
+    k: v for k, v in market_data.items()
+    if v.get("status") != "ok"
+}
+if failed_items:
+    logger.error("Failed market items: %s", json.dumps(failed_items, ensure_ascii=False, indent=2))
     ok_count = market_output["summary_stats"]["ok_count"]
     if ok_count < MIN_OK_COUNT:
         raise RuntimeError(
