@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-04-22T13:06:10.659709+00:00",
+  "generated_at": "2026-04-22T13:21:05.435879+00:00",
   "schema_version": "A.8",
   "source_stack": [
-    "Fed official sources",
-    "ECB official sources",
+    "Fed official structured sources",
+    "ECB official structured sources",
     "BOJ official sources",
-    "PBOC/CFETS official sources"
+    "PBOC official sources"
   ],
   "central_banks": {
     "fed": {
@@ -13,7 +13,7 @@
       "display_name": "Fed",
       "current_rate": "3.50% - 3.75%",
       "current_rate_date": "2026-04-22",
-      "next_meeting": "N/A",
+      "next_meeting": "2026-04-29",
       "market_pricing_path": "N/A",
       "sources": {
         "lower_series_id": "DFEDTARL",
@@ -31,7 +31,7 @@
       "display_name": "ECB",
       "current_rate": "MRR 2.15% / DFR 2.00% / MLFR 2.40%",
       "current_rate_date": "2026-04-22",
-      "next_meeting": "N/A",
+      "next_meeting": "2026-04-30",
       "market_pricing_path": "N/A",
       "sources": {
         "mrr_series_key": "D.U2.EUR.4F.KR.MRR_RT.LEV",
@@ -65,13 +65,15 @@
       "status": "ok",
       "display_name": "PBOC",
       "current_rate": "N/A",
-      "current_rate_date": "N/A",
+      "current_rate_date": "2026-03-31",
       "next_meeting": "N/A",
       "market_pricing_path": "N/A",
       "sources": {
         "schedule_url": "https://www.pbc.gov.cn/en/3688229/3688311/3688329/index.html"
       },
-      "notes": []
+      "notes": [
+        "latest MPC meeting observed: 2026-03-31"
+      ]
     }
   },
   "quality_checks": {
