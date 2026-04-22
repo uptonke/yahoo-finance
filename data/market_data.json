@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-22T00:31:27.179782+00:00",
+  "generated_at": "2026-04-22T02:33:21.549977+00:00",
   "schema_version": "Z.1",
   "source": "Yahoo Finance via yfinance",
   "note": "Each instrument contains the latest available close and previous valid close. Dates follow each instrument's own trading calendar. display_close/display_change/as_of_label are preformatted for downstream report generation. ^TNX is transformed from Yahoo's quoted value into actual 10Y Treasury yield percent.",
