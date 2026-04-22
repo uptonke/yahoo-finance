@@ -1,27 +1,44 @@
 import json
+import logging
 import os
-import sys
-import time
+import re
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-import pandas as pd
-import yfinance as yf
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-OUTPUT_FILE = "data/market_data.json"
-DEFAULT_HISTORY_PERIOD = "1mo"
+# =========================================================
+# 0. 基本設定
+# =========================================================
 
-# 批次抓取重試
-BATCH_RETRIES = 3
-BATCH_BACKOFF_SECONDS = [20, 60]
+OUTPUT_DIR = Path("data")
+MARKET_OUTPUT_FILE = OUTPUT_DIR / "market_data.json"
+CENTRAL_BANK_OUTPUT_FILE = OUTPUT_DIR / "central_bank_data.json"
 
-# 至少成功幾個標的才允許覆蓋舊快照
-MIN_OK_COUNT = 6
+TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", "").strip()
+FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
 
-INSTRUMENTS: Dict[str, Dict[str, Any]] = {
+REQUEST_TIMEOUT = 20
+MIN_OK_COUNT = 4
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# =========================================================
+# 1. 可調整的 symbol / source config
+# =========================================================
+
+MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
     "sp500": {
         "display_name": "S&P 500",
-        "symbol": "^GSPC",
+        "provider": "twelve_data",
+        "symbol": os.getenv("TD_SP500_SYMBOL", "SPX"),
         "asset_class": "equity_index",
         "report_category": "equities",
         "market": "US",
@@ -29,107 +46,147 @@ INSTRUMENTS: Dict[str, Dict[str, Any]] = {
         "priority": 10,
         "decimals": 2,
     },
-    "nasdaq": {
-        "display_name": "NASDAQ Composite",
-        "symbol": "^IXIC",
-        "asset_class": "equity_index",
-        "report_category": "equities",
-        "market": "US",
-        "currency": "USD",
-        "priority": 20,
-        "decimals": 2,
-    },
-    "dow_jones": {
-        "display_name": "Dow Jones Industrial Average",
-        "symbol": "^DJI",
-        "asset_class": "equity_index",
-        "report_category": "equities",
-        "market": "US",
-        "currency": "USD",
-        "priority": 30,
-        "decimals": 2,
-    },
-    "vix": {
-        "display_name": "CBOE Volatility Index",
-        "symbol": "^VIX",
-        "asset_class": "volatility_index",
-        "report_category": "risk",
-        "market": "US",
-        "currency": "INDEX_POINTS",
-        "priority": 40,
-        "decimals": 2,
-    },
     "taiex": {
         "display_name": "TAIEX",
-        "symbol": "^TWII",
+        "provider": "twelve_data",
+        "symbol": os.getenv("TD_TAIEX_SYMBOL", "TAIEX"),
         "asset_class": "equity_index",
         "report_category": "equities",
         "market": "TW",
         "currency": "TWD",
+        "priority": 20,
+        "decimals": 2,
+    },
+    "wti": {
+        "display_name": "WTI Crude Oil",
+        "provider": "twelve_data",
+        "symbol": os.getenv("TD_WTI_SYMBOL", "WTI"),
+        "asset_class": "commodity",
+        "report_category": "commodities",
+        "market": "GLOBAL",
+        "currency": "USD",
+        "priority": 30,
+        "decimals": 2,
+    },
+    "usd_twd": {
+        "display_name": "USD/TWD",
+        "provider": "twelve_data",
+        "symbol": os.getenv("TD_USDTWD_SYMBOL", "USD/TWD"),
+        "asset_class": "fx",
+        "report_category": "fx",
+        "market": "FX",
+        "currency": "TWD_PER_USD",
+        "priority": 40,
+        "decimals": 4,
+    },
+    "dxy_proxy": {
+        "display_name": "US Dollar Broad Index Proxy",
+        "provider": "fred",
+        "series_id": os.getenv("FRED_DXY_PROXY_SERIES", "DTWEXBGS"),
+        "asset_class": "fx_index",
+        "report_category": "fx",
+        "market": "US",
+        "currency": "INDEX_POINTS",
         "priority": 50,
         "decimals": 2,
+        "note": "FRED broad dollar index proxy; not identical to ICE DXY.",
     },
     "us10y": {
         "display_name": "US 10Y Treasury Yield",
-        "symbol": "^TNX",
+        "provider": "fred",
+        "series_id": os.getenv("FRED_US10Y_SERIES", "DGS10"),
         "asset_class": "government_bond_yield",
         "report_category": "rates",
         "market": "US",
         "currency": "PERCENT",
         "priority": 60,
         "decimals": 3,
-        "transform": {
-            "divide_by": 10,
-            "unit": "%"
-        }
-    },
-    "wti": {
-        "display_name": "WTI Crude Oil",
-        "symbol": "CL=F",
-        "asset_class": "commodity",
-        "report_category": "commodities",
-        "market": "GLOBAL",
-        "currency": "USD",
-        "priority": 70,
-        "decimals": 2,
-    },
-    "gold": {
-        "display_name": "Gold",
-        "symbol": "GC=F",
-        "asset_class": "commodity",
-        "report_category": "commodities",
-        "market": "GLOBAL",
-        "currency": "USD",
-        "priority": 80,
-        "decimals": 2,
-    },
-    "dxy": {
-        "display_name": "US Dollar Index",
-        "symbol": "DX-Y.NYB",
-        "asset_class": "fx_index",
-        "report_category": "fx",
-        "market": "US",
-        "currency": "INDEX_POINTS",
-        "priority": 90,
-        "decimals": 2,
-    },
-    "usd_twd": {
-        "display_name": "USD/TWD",
-        "symbol": "TWD=X",
-        "asset_class": "fx",
-        "report_category": "fx",
-        "market": "FX",
-        "currency": "TWD_PER_USD",
-        "priority": 100,
-        "decimals": 4,
+        "unit": "%",
     },
 }
 
+CENTRAL_BANK_SOURCE_CONFIG = {
+    "fed": {
+        "display_name": "Fed",
+        "current_rate_url": os.getenv("FED_RATE_URL", "").strip(),
+        "schedule_url": os.getenv("FED_SCHEDULE_URL", "").strip(),
+        "market_pricing_url": os.getenv("FED_MARKET_PRICING_URL", "").strip(),
+    },
+    "ecb": {
+        "display_name": "ECB",
+        "current_rate_url": os.getenv("ECB_RATE_URL", "").strip(),
+        "schedule_url": os.getenv("ECB_SCHEDULE_URL", "").strip(),
+        "market_pricing_url": os.getenv("ECB_MARKET_PRICING_URL", "").strip(),
+    },
+    "boj": {
+        "display_name": "BOJ",
+        "current_rate_url": os.getenv("BOJ_RATE_URL", "").strip(),
+        "schedule_url": os.getenv("BOJ_SCHEDULE_URL", "").strip(),
+        "market_pricing_url": os.getenv("BOJ_MARKET_PRICING_URL", "").strip(),
+    },
+    "pboc": {
+        "display_name": "PBOC",
+        "current_rate_url": os.getenv("PBOC_RATE_URL", "").strip(),
+        "schedule_url": os.getenv("PBOC_SCHEDULE_URL", "").strip(),
+        "market_pricing_url": os.getenv("PBOC_MARKET_PRICING_URL", "").strip(),
+    },
+}
 
-def safe_round(value: Any, digits: int = 4) -> Optional[float]:
+TW_TWSE_URL = os.getenv("TWSE_FOREIGN_FLOW_URL", "").strip()
+TW_TPEX_URL = os.getenv("TPEX_FOREIGN_FLOW_URL", "").strip()
+
+# =========================================================
+# 2. Session / HTTP helpers
+# =========================================================
+
+def build_session() -> requests.Session:
+    session = requests.Session()
+
+    retry = Retry(
+        total=3,
+        read=3,
+        connect=3,
+        backoff_factor=1.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset(["GET"]),
+        raise_on_status=False,
+    )
+
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    session.headers.update(
+        {
+            "User-Agent": "macro-brief-bot/1.0",
+            "Accept": "application/json, text/plain, */*",
+        }
+    )
+    return session
+
+
+SESSION = build_session()
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def safe_float(value: Any) -> Optional[float]:
     try:
-        if value is None or pd.isna(value):
+        if value is None:
             return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+
+def safe_round(value: Optional[float], digits: int) -> Optional[float]:
+    if value is None:
+        return None
+    try:
         return round(float(value), digits)
     except Exception:
         return None
@@ -142,33 +199,28 @@ def format_number(value: Optional[float], decimals: int = 2, use_sign: bool = Fa
     return fmt.format(value)
 
 
-def get_now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    resp = SESSION.get(url, params=params, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
 
 
-def get_freshness_days(date_str: str) -> Optional[int]:
-    try:
-        d = datetime.strptime(date_str, "%Y-%m-%d").date()
-        now_utc = datetime.now(timezone.utc).date()
-        return (now_utc - d).days
-    except Exception:
-        return None
+def fetch_text(url: str) -> str:
+    resp = SESSION.get(url, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.text
 
 
-def infer_is_latest_trading_day(date_str: str) -> Optional[bool]:
-    freshness_days = get_freshness_days(date_str)
-    if freshness_days is None:
-        return None
-    return freshness_days <= 1
+def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, path)
 
-
-def infer_market_session_label(is_latest_trading_day: Optional[bool]) -> str:
-    if is_latest_trading_day is True:
-        return "latest"
-    if is_latest_trading_day is False:
-        return "recent_trading_day"
-    return "unknown"
-
+# =========================================================
+# 3. 通用 market helpers
+# =========================================================
 
 def infer_direction(change: Optional[float]) -> str:
     if change is None:
@@ -180,70 +232,10 @@ def infer_direction(change: Optional[float]) -> str:
     return "flat"
 
 
-def transform_price(raw_value: float, instrument: Dict[str, Any]) -> Tuple[float, Optional[str]]:
-    transform_cfg = instrument.get("transform")
-    if not transform_cfg:
-        return raw_value, None
-
-    divide_by = transform_cfg.get("divide_by", 1)
-    unit = transform_cfg.get("unit")
-    transformed = raw_value / divide_by if divide_by else raw_value
-    return transformed, unit
-
-
-def calculate_change_metrics(
-    close: Optional[float],
-    prev_close: Optional[float],
-    price_digits: int = 4,
-    pct_digits: int = 2
-) -> Tuple[Optional[float], Optional[float]]:
-    if close is None or prev_close is None:
-        return None, None
-
-    change = round(close - prev_close, price_digits)
-    if prev_close == 0:
-        return change, None
-
-    change_pct = round((change / prev_close) * 100, pct_digits)
-    return change, change_pct
-
-
-def format_close(close: Optional[float], instrument: Dict[str, Any], unit: Optional[str]) -> str:
-    if close is None:
-        return "N/A"
-
-    decimals = instrument.get("decimals", 2)
-    currency = instrument.get("currency")
-
-    if unit == "%":
-        return f"{format_number(close, decimals)}%"
-
-    if currency == "PERCENT":
-        return f"{format_number(close, decimals)}%"
-    return format_number(close, decimals)
-
-
-def format_change(
-    change: Optional[float],
-    change_pct: Optional[float],
-    instrument: Dict[str, Any],
-    unit: Optional[str]
-) -> str:
-    if change is None:
-        return "N/A"
-
-    decimals = instrument.get("decimals", 2)
-    currency = instrument.get("currency")
-
-    if unit == "%" or currency == "PERCENT":
-        base = f"{format_number(change, decimals, use_sign=True)}pp"
-    else:
-        base = format_number(change, decimals, use_sign=True)
-
-    if change_pct is None:
-        return base
-
-    return f"{base} ({format_number(change_pct, 2, use_sign=True)}%)"
+def market_session_label_from_date(date_str: Optional[str]) -> str:
+    if not date_str:
+        return "unknown"
+    return "latest"
 
 
 def build_as_of_label(date_str: Optional[str], market_session_label: str) -> str:
@@ -256,218 +248,389 @@ def build_as_of_label(date_str: Optional[str], market_session_label: str) -> str
     return f"available close ({date_str})"
 
 
-def infer_macro_signal_tag(key: str, direction: str) -> Optional[str]:
-    mapping = {
-        "sp500": {"up": "risk_on", "down": "risk_off"},
-        "nasdaq": {"up": "risk_on", "down": "risk_off"},
-        "dow_jones": {"up": "risk_on", "down": "risk_off"},
-        "taiex": {"up": "risk_on", "down": "risk_off"},
-        "vix": {"up": "risk_off", "down": "risk_on"},
-        "us10y": {"up": "rates_up", "down": "rates_down"},
-        "wti": {"up": "oil_up", "down": "oil_down"},
-        "gold": {"up": "gold_up", "down": "gold_down"},
-        "dxy": {"up": "usd_stronger", "down": "usd_weaker"},
-        "usd_twd": {"up": "usd_stronger_vs_twd", "down": "twd_stronger_vs_usd"},
-    }
-    return mapping.get(key, {}).get(direction)
+def format_close(value: Optional[float], cfg: Dict[str, Any]) -> str:
+    if value is None:
+        return "N/A"
+    decimals = cfg.get("decimals", 2)
+    currency = cfg.get("currency")
+    unit = cfg.get("unit")
+
+    if unit == "%":
+        return f"{format_number(value, decimals)}%"
+    if currency == "PERCENT":
+        return f"{format_number(value, decimals)}%"
+    return format_number(value, decimals)
 
 
-def infer_surprise_flag(asset_class: str, change_pct: Optional[float]) -> Optional[bool]:
+def format_change(change: Optional[float], change_pct: Optional[float], cfg: Dict[str, Any]) -> str:
+    if change is None:
+        return "N/A"
+
+    decimals = cfg.get("decimals", 2)
+    currency = cfg.get("currency")
+    unit = cfg.get("unit")
+
+    if unit == "%" or currency == "PERCENT":
+        base = f"{format_number(change, decimals, use_sign=True)}pp"
+    else:
+        base = format_number(change, decimals, use_sign=True)
+
     if change_pct is None:
-        return None
-
-    thresholds = {
-        "equity_index": 1.5,
-        "volatility_index": 5.0,
-        "government_bond_yield": 1.0,
-        "commodity": 2.0,
-        "fx_index": 0.75,
-        "fx": 0.75,
-    }
-    threshold = thresholds.get(asset_class, 2.0)
-    return abs(change_pct) >= threshold
+        return base
+    return f"{base} ({format_number(change_pct, 2, use_sign=True)}%)"
 
 
-def build_llm_hint(item: Dict[str, Any]) -> Optional[str]:
-    name = item.get("display_name")
-    direction = item.get("direction")
-    display_change = item.get("display_change")
-
-    if not name or not direction or display_change in {None, "N/A"}:
-        return None
-
-    if direction == "up":
-        return f"{name} moved higher: {display_change}."
-    if direction == "down":
-        return f"{name} moved lower: {display_change}."
-    if direction == "flat":
-        return f"{name} was broadly unchanged: {display_change}."
-    return None
-
-
-def build_error_result(instrument: Dict[str, Any], message: str) -> Dict[str, Any]:
+def build_error_result(cfg: Dict[str, Any], message: str) -> Dict[str, Any]:
     return {
         "status": "error",
-        "display_name": instrument["display_name"],
-        "symbol": instrument["symbol"],
-        "asset_class": instrument["asset_class"],
-        "report_category": instrument["report_category"],
-        "market": instrument["market"],
-        "currency": instrument["currency"],
-        "priority": instrument["priority"],
+        "display_name": cfg["display_name"],
+        "provider": cfg["provider"],
+        "asset_class": cfg["asset_class"],
+        "report_category": cfg["report_category"],
+        "market": cfg["market"],
+        "currency": cfg["currency"],
+        "priority": cfg["priority"],
         "error": message,
     }
 
 
-def download_all_symbols(symbols: list[str]) -> pd.DataFrame:
-    last_error = None
+def build_ok_result(
+    cfg: Dict[str, Any],
+    date_str: Optional[str],
+    close: Optional[float],
+    prev_close: Optional[float],
+    raw_payload: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    decimals = cfg.get("decimals", 2)
 
-    for i in range(BATCH_RETRIES):
-        try:
-            df = yf.download(
-                tickers=symbols,
-                period=DEFAULT_HISTORY_PERIOD,
-                interval="1d",
-                auto_adjust=False,
-                actions=False,
-                progress=False,
-                threads=False,
-                group_by="ticker",
-                multi_level_index=True,
-                timeout=20,
-            )
-            if df is not None and not df.empty:
-                return df
+    change = None
+    change_pct = None
+    if close is not None and prev_close is not None:
+        change = safe_round(close - prev_close, decimals)
+        if prev_close != 0:
+            change_pct = round((change / prev_close) * 100, 2)
 
-            last_error = "empty dataframe returned by yfinance (likely rate-limited; see failed downloads log above)"
-        except Exception as e:
-            last_error = str(e)
+    session_label = market_session_label_from_date(date_str)
 
-        if i < BATCH_RETRIES - 1:
-            wait_s = BATCH_BACKOFF_SECONDS[i]
-            print(f"Batch download failed ({last_error}). Sleep {wait_s}s then retry...")
-            time.sleep(wait_s)
-
-    raise RuntimeError(f"batch download failed after {BATCH_RETRIES} retries: {last_error}")
-
-
-def extract_symbol_history(batch_df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-    if batch_df.empty:
-        return pd.DataFrame()
-
-    if isinstance(batch_df.columns, pd.MultiIndex):
-        level0 = batch_df.columns.get_level_values(0)
-        if symbol not in level0:
-            return pd.DataFrame()
-        df = batch_df[symbol].copy()
-    else:
-        df = batch_df.copy()
-
-    if "Close" not in df.columns:
-        return pd.DataFrame()
-
-    df = df.dropna(subset=["Close"])
-    return df
-
-
-def build_instrument_result(key: str, instrument: Dict[str, Any], hist: pd.DataFrame) -> Dict[str, Any]:
-    if hist.empty:
-        return build_error_result(instrument, "no data returned for symbol")
-
-    latest = hist.iloc[-1]
-    latest_raw = float(latest["Close"])
-    latest_value, transformed_unit = transform_price(latest_raw, instrument)
-
-    latest_date = hist.index[-1].strftime("%Y-%m-%d")
-    decimals = instrument.get("decimals", 2)
-
-    close = safe_round(latest_value, decimals)
-    freshness_days = get_freshness_days(latest_date)
-    is_latest_trading_day = infer_is_latest_trading_day(latest_date)
-    market_session_label = infer_market_session_label(is_latest_trading_day)
-
-    result: Dict[str, Any] = {
+    result = {
         "status": "ok",
-        "display_name": instrument["display_name"],
-        "symbol": instrument["symbol"],
-        "asset_class": instrument["asset_class"],
-        "report_category": instrument["report_category"],
-        "market": instrument["market"],
-        "currency": instrument["currency"],
-        "priority": instrument["priority"],
-        "unit": transformed_unit,
-        "date": latest_date,
-        "close": close,
-        "raw_close": safe_round(latest_raw, 6),
-        "freshness_days": freshness_days,
-        "is_latest_trading_day": is_latest_trading_day,
-        "market_session_label": market_session_label,
-        "display_close": format_close(close, instrument, transformed_unit),
-        "as_of_label": build_as_of_label(latest_date, market_session_label),
+        "display_name": cfg["display_name"],
+        "provider": cfg["provider"],
+        "asset_class": cfg["asset_class"],
+        "report_category": cfg["report_category"],
+        "market": cfg["market"],
+        "currency": cfg["currency"],
+        "priority": cfg["priority"],
+        "date": date_str,
+        "close": safe_round(close, decimals),
+        "prev_close": safe_round(prev_close, decimals),
+        "change": change,
+        "change_pct": change_pct,
+        "direction": infer_direction(change),
+        "market_session_label": session_label,
+        "display_close": format_close(close, cfg),
+        "display_change": format_change(change, change_pct, cfg),
+        "as_of_label": build_as_of_label(date_str, session_label),
+        "raw_payload": raw_payload,
     }
 
-    if len(hist) >= 2:
-        prev = hist.iloc[-2]
-        prev_raw = float(prev["Close"])
-        prev_value, _ = transform_price(prev_raw, instrument)
+    if "note" in cfg:
+        result["note"] = cfg["note"]
+    if "unit" in cfg:
+        result["unit"] = cfg["unit"]
 
-        prev_date = hist.index[-2].strftime("%Y-%m-%d")
-        prev_close = safe_round(prev_value, decimals)
-
-        change, change_pct = calculate_change_metrics(
-            close=close,
-            prev_close=prev_close,
-            price_digits=decimals,
-            pct_digits=2,
-        )
-        direction = infer_direction(change)
-
-        result.update({
-            "prev_date": prev_date,
-            "prev_close": prev_close,
-            "raw_prev_close": safe_round(prev_raw, 6),
-            "change": change,
-            "change_pct": change_pct,
-            "direction": direction,
-            "display_change": format_change(change, change_pct, instrument, transformed_unit),
-            "macro_signal_tag": infer_macro_signal_tag(key, direction),
-            "surprise_flag": infer_surprise_flag(instrument["asset_class"], change_pct),
-        })
-    else:
-        result.update({
-            "prev_date": None,
-            "prev_close": None,
-            "raw_prev_close": None,
-            "change": None,
-            "change_pct": None,
-            "direction": "unknown",
-            "display_change": "N/A",
-            "macro_signal_tag": None,
-            "surprise_flag": None,
-            "warning": "only one valid trading day found; change metrics unavailable",
-        })
-
-    result["llm_hint"] = build_llm_hint(result)
     return result
 
+# =========================================================
+# 4. Twelve Data
+# =========================================================
+
+def fetch_twelve_data_quote(symbol: str) -> Dict[str, Any]:
+    if not TWELVE_DATA_API_KEY:
+        raise RuntimeError("Missing TWELVE_DATA_API_KEY")
+
+    url = "https://api.twelvedata.com/quote"
+    params = {
+        "symbol": symbol,
+        "apikey": TWELVE_DATA_API_KEY,
+    }
+    return fetch_json(url, params=params)
+
+
+def parse_twelve_data_quote(cfg: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
+    possible_close_keys = ["close", "price", "previous_close"]
+    possible_prev_close_keys = ["previous_close", "prev_close"]
+    possible_date_keys = ["datetime", "timestamp", "date"]
+
+    close = None
+    for key in possible_close_keys:
+        close = safe_float(payload.get(key))
+        if close is not None:
+            break
+
+    prev_close = None
+    for key in possible_prev_close_keys:
+        prev_close = safe_float(payload.get(key))
+        if prev_close is not None:
+            break
+
+    date_str = None
+    for key in possible_date_keys:
+        raw = payload.get(key)
+        if raw:
+            date_str = str(raw)[:10]
+            break
+
+    if close is None:
+        raise RuntimeError(f"Twelve Data quote missing close/price field: {payload}")
+
+    return build_ok_result(
+        cfg=cfg,
+        date_str=date_str,
+        close=close,
+        prev_close=prev_close,
+        raw_payload=payload,
+    )
+
+
+def fetch_market_from_twelve_data(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        payload = fetch_twelve_data_quote(cfg["symbol"])
+        if "status" in payload and str(payload.get("status")).lower() == "error":
+            return build_error_result(cfg, payload.get("message", "Twelve Data error"))
+        return parse_twelve_data_quote(cfg, payload)
+    except Exception as e:
+        return build_error_result(cfg, f"Twelve Data fetch failed: {e}")
+
+# =========================================================
+# 5. FRED
+# =========================================================
+
+def fetch_fred_series_observations(series_id: str) -> Dict[str, Any]:
+    if not FRED_API_KEY:
+        raise RuntimeError("Missing FRED_API_KEY")
+
+    url = "https://api.stlouisfed.org/fred/series/observations"
+    params = {
+        "series_id": series_id,
+        "api_key": FRED_API_KEY,
+        "file_type": "json",
+        "sort_order": "asc",
+    }
+    return fetch_json(url, params=params)
+
+
+def parse_fred_series(cfg: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
+    observations = payload.get("observations", [])
+    valid = []
+
+    for obs in observations:
+        value = safe_float(obs.get("value"))
+        if value is None:
+            continue
+        valid.append(
+            {
+                "date": obs.get("date"),
+                "value": value,
+            }
+        )
+
+    if not valid:
+        raise RuntimeError("FRED observations empty or invalid")
+
+    latest = valid[-1]
+    prev = valid[-2] if len(valid) >= 2 else None
+
+    return build_ok_result(
+        cfg=cfg,
+        date_str=latest.get("date"),
+        close=latest.get("value"),
+        prev_close=prev.get("value") if prev else None,
+        raw_payload=payload,
+    )
+
+
+def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        payload = fetch_fred_series_observations(cfg["series_id"])
+        return parse_fred_series(cfg, payload)
+    except Exception as e:
+        return build_error_result(cfg, f"FRED fetch failed: {e}")
+
+# =========================================================
+# 6. 台灣外資動向（骨架）
+# =========================================================
+
+def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
+    return {
+        "status": "todo",
+        "single_day": "N/A",
+        "date": None,
+        "source": None,
+        "note": "TW official parser not implemented yet.",
+    }
+
+
+def fetch_tw_foreign_flow() -> Dict[str, Any]:
+    result = {
+        "twse": {
+            "status": "unconfigured",
+            "single_day": "N/A",
+            "date": None,
+        },
+        "tpex": {
+            "status": "unconfigured",
+            "single_day": "N/A",
+            "date": None,
+        },
+    }
+
+    if TW_TWSE_URL:
+        try:
+            text = fetch_text(TW_TWSE_URL)
+            result["twse"] = parse_tw_official_foreign_flow(text)
+        except Exception as e:
+            result["twse"] = {
+                "status": "error",
+                "single_day": "N/A",
+                "date": None,
+                "error": str(e),
+            }
+
+    if TW_TPEX_URL:
+        try:
+            text = fetch_text(TW_TPEX_URL)
+            result["tpex"] = parse_tw_official_foreign_flow(text)
+        except Exception as e:
+            result["tpex"] = {
+                "status": "error",
+                "single_day": "N/A",
+                "date": None,
+                "error": str(e),
+            }
+
+    return result
+
+
+def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_payload: Dict[str, Any]) -> Dict[str, Any]:
+    usd_twd_item = market_data.get("usd_twd", {})
+    usd_twd_spot = "N/A"
+    if usd_twd_item.get("status") == "ok":
+        usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
+
+    single_day = "N/A"
+    if foreign_flow_payload.get("twse", {}).get("single_day") not in (None, "", "N/A"):
+        single_day = foreign_flow_payload["twse"]["single_day"]
+
+    return {
+        "foreign_flow": {
+            "single_day": single_day,
+            "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）",
+            "source_payload": foreign_flow_payload,
+        },
+        "semiconductor_supply_chain": {
+            "core_logic": [
+                "AI需求強（持續）",
+                "能源與原物料成本上升（壓縮部分毛利）",
+            ],
+            "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大",
+        },
+        "fx": {
+            "usd_twd_spot": usd_twd_spot,
+            "assessment": [
+                "若油價上行 → USD 轉強",
+                "若風險偏好回升 → TWD 偏強",
+            ],
+            "base_case": "區間震盪機率 60%",
+        },
+    }
+
+# =========================================================
+# 7. 央行動態（骨架）
+# =========================================================
+
+def extract_basic_rate_and_date_from_text(text: str) -> Dict[str, Any]:
+    rate_match = re.search(r"(\d+(?:\.\d+)?)\s?%", text)
+    date_match = re.search(r"(\d{4}-\d{2}-\d{2})", text)
+
+    return {
+        "current_rate": rate_match.group(1) + "%" if rate_match else "N/A",
+        "next_meeting": date_match.group(1) if date_match else "N/A",
+    }
+
+
+def fetch_central_bank_block(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
+    result = {
+        "status": "ok",
+        "display_name": cfg["display_name"],
+        "current_rate": "N/A",
+        "next_meeting": "N/A",
+        "market_pricing_path": "N/A",
+        "sources": {},
+        "notes": [],
+    }
+
+    try:
+        if cfg.get("current_rate_url"):
+            text = fetch_text(cfg["current_rate_url"])
+            parsed = extract_basic_rate_and_date_from_text(text)
+            result["current_rate"] = parsed.get("current_rate", "N/A")
+            result["sources"]["current_rate_url"] = cfg["current_rate_url"]
+        else:
+            result["notes"].append("current_rate_url not configured")
+    except Exception as e:
+        result["status"] = "partial_error"
+        result["notes"].append(f"current_rate fetch failed: {e}")
+
+    try:
+        if cfg.get("schedule_url"):
+            text = fetch_text(cfg["schedule_url"])
+            parsed = extract_basic_rate_and_date_from_text(text)
+            if parsed.get("next_meeting") != "N/A":
+                result["next_meeting"] = parsed["next_meeting"]
+            result["sources"]["schedule_url"] = cfg["schedule_url"]
+        else:
+            result["notes"].append("schedule_url not configured")
+    except Exception as e:
+        result["status"] = "partial_error"
+        result["notes"].append(f"schedule fetch failed: {e}")
+
+    try:
+        if cfg.get("market_pricing_url"):
+            text = fetch_text(cfg["market_pricing_url"])
+            result["market_pricing_path"] = text[:300].strip() if text else "N/A"
+            result["sources"]["market_pricing_url"] = cfg["market_pricing_url"]
+        else:
+            result["notes"].append("market_pricing_url not configured")
+    except Exception as e:
+        result["status"] = "partial_error"
+        result["notes"].append(f"market pricing fetch failed: {e}")
+
+    return result
+
+
+def fetch_all_central_banks() -> Dict[str, Any]:
+    out = {}
+    for key, cfg in CENTRAL_BANK_SOURCE_CONFIG.items():
+        out[key] = fetch_central_bank_block(key, cfg)
+    return out
+
+# =========================================================
+# 8. 組裝輸出
+# =========================================================
 
 def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     ok_items = [v for v in market_data.values() if v.get("status") == "ok"]
 
     by_category: Dict[str, int] = {}
-    surprise_count = 0
-
     for item in ok_items:
         cat = item.get("report_category", "uncategorized")
         by_category[cat] = by_category.get(cat, 0) + 1
-        if item.get("surprise_flag") is True:
-            surprise_count += 1
 
     return {
         "total_instruments": len(market_data),
         "ok_count": len(ok_items),
         "error_count": len(market_data) - len(ok_items),
-        "surprise_count": surprise_count,
         "category_counts": by_category,
     }
 
@@ -480,111 +643,99 @@ def build_report_ready_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str,
     for item in ok_items:
         cat = item.get("report_category", "uncategorized")
         by_category.setdefault(cat, [])
-        by_category[cat].append({
-            "display_name": item.get("display_name"),
-            "display_close": item.get("display_close"),
-            "display_change": item.get("display_change"),
-            "as_of_label": item.get("as_of_label"),
-            "direction": item.get("direction"),
-            "macro_signal_tag": item.get("macro_signal_tag"),
-            "surprise_flag": item.get("surprise_flag"),
-            "llm_hint": item.get("llm_hint"),
-        })
+        by_category[cat].append(
+            {
+                "display_name": item.get("display_name"),
+                "display_close": item.get("display_close"),
+                "display_change": item.get("display_change"),
+                "as_of_label": item.get("as_of_label"),
+                "direction": item.get("direction"),
+            }
+        )
 
     return {
         "ordered_keys": [
-            key for key, _ in sorted(
+            k for k, _ in sorted(
                 ((k, v) for k, v in market_data.items() if v.get("status") == "ok"),
-                key=lambda kv: kv[1].get("priority", 9999)
+                key=lambda kv: kv[1].get("priority", 9999),
             )
         ],
         "by_category": by_category,
     }
 
 
-def build_taiwan_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-    usd_twd_item = market_data.get("usd_twd", {})
-    usd_twd_spot = "N/A"
+def fetch_market_data() -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
 
-    if usd_twd_item.get("status") == "ok":
-        usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
+    for key, cfg in sorted(MARKET_CONFIG.items(), key=lambda x: x[1]["priority"]):
+        logger.info("Fetching market item: %s (%s)", cfg["display_name"], cfg["provider"])
 
+        provider = cfg["provider"]
+        if provider == "twelve_data":
+            out[key] = fetch_market_from_twelve_data(key, cfg)
+        elif provider == "fred":
+            out[key] = fetch_market_from_fred(key, cfg)
+        else:
+            out[key] = build_error_result(cfg, f"unsupported provider: {provider}")
+
+    return out
+
+
+def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        "foreign_flow": {
-            "single_day": "N/A",
-            "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）"
-        },
-        "semiconductor_supply_chain": {
-            "core_logic": [
-                "AI需求強（持續）",
-                "能源與原物料成本上升（壓縮部分毛利）"
-            ],
-            "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大"
-        },
-        "fx": {
-            "usd_twd_spot": usd_twd_spot,
-            "assessment": [
-                "若油價上行 → USD 轉強",
-                "若風險偏好回升 → TWD 偏強"
-            ],
-            "base_case": "區間震盪機率 60%"
-        }
-    }
-
-
-def main() -> None:
-    market_data: Dict[str, Dict[str, Any]] = {}
-    symbols = [cfg["symbol"] for _, cfg in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"])]
-
-    try:
-        batch_df = download_all_symbols(symbols)
-    except Exception as e:
-        print(f"FATAL: {e}")
-        sys.exit(1)
-
-    for key, instrument in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"]):
-        symbol = instrument["symbol"]
-        print(f"Processing {instrument['display_name']} ({symbol})...")
-        hist = extract_symbol_history(batch_df, symbol)
-        result = build_instrument_result(key, instrument, hist)
-        market_data[key] = result
-        print(f"  -> {result}")
-
-    error_symbols = [k for k, v in market_data.items() if v.get("status") == "error"]
-    if error_symbols:
-        print(f"WARNING: failed symbols: {error_symbols}")
-
-    output = {
-        "generated_at": get_now_utc_iso(),
-        "schema_version": "Z.3",
-        "source": "Yahoo Finance via yfinance",
-        "note": (
-            "Each instrument contains the latest available close and previous valid close. "
-            "Dates follow each instrument's own trading calendar. "
-            "display_close/display_change/as_of_label are preformatted for downstream report generation. "
-            "^TNX is transformed from Yahoo's quoted value into actual 10Y Treasury yield percent."
-        ),
+        "generated_at": now_iso(),
+        "schema_version": "A.1",
+        "source_stack": [
+            "Twelve Data",
+            "FRED",
+            "TWSE/TPEX official pages",
+        ],
         "summary_stats": build_summary_stats(market_data),
         "report_ready_view": build_report_ready_view(market_data),
-        "taiwan_view": build_taiwan_view(market_data),
+        "taiwan_view": taiwan_view,
         "market_data": market_data,
     }
 
-    ok_count = output["summary_stats"]["ok_count"]
+
+def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "generated_at": now_iso(),
+        "schema_version": "A.1",
+        "source_stack": [
+            "Fed official sources",
+            "ECB official sources",
+            "BOJ official sources",
+            "PBOC/CFETS official sources",
+        ],
+        "central_banks": central_bank_data,
+    }
+
+# =========================================================
+# 9. main
+# =========================================================
+
+def main() -> None:
+    logger.info("Starting scheme A pipeline...")
+
+    market_data = fetch_market_data()
+    foreign_flow_payload = fetch_tw_foreign_flow()
+    taiwan_view = build_taiwan_view(market_data, foreign_flow_payload)
+    central_bank_data = fetch_all_central_banks()
+
+    market_output = build_market_output(market_data, taiwan_view)
+    central_bank_output = build_central_bank_output(central_bank_data)
+
+    ok_count = market_output["summary_stats"]["ok_count"]
     if ok_count < MIN_OK_COUNT:
-        print(f"FATAL: ok_count ({ok_count}) < MIN_OK_COUNT ({MIN_OK_COUNT}), refuse to overwrite previous snapshot.")
-        sys.exit(1)
+        raise RuntimeError(
+            f"ok_count ({ok_count}) < MIN_OK_COUNT ({MIN_OK_COUNT}); refuse to write incomplete snapshot"
+        )
 
-    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+    atomic_write_json(MARKET_OUTPUT_FILE, market_output)
+    atomic_write_json(CENTRAL_BANK_OUTPUT_FILE, central_bank_output)
 
-    tmp_file = OUTPUT_FILE + ".tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
-
-    os.replace(tmp_file, OUTPUT_FILE)
-
-    print(f"\n=== Done. Saved to {OUTPUT_FILE} ===")
-    print(json.dumps(output, ensure_ascii=False, indent=2))
+    logger.info("Done. Wrote %s", MARKET_OUTPUT_FILE)
+    logger.info("Done. Wrote %s", CENTRAL_BANK_OUTPUT_FILE)
 
 
 if __name__ == "__main__":
