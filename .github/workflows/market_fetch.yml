@@ -44,6 +44,10 @@ jobs:
       PBOC_SCHEDULE_URL: ""
       PBOC_MARKET_PRICING_URL: ""
 
+      TPEX_FOREIGN_FLOW_API_URL: "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade"
+      TPEX_FOREIGN_FLOW_SECT: "AL"
+      TPEX_FOREIGN_FLOW_TYPE: "Daily"
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
