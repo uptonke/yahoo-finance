@@ -725,12 +725,27 @@ def main() -> None:
     market_output = build_market_output(market_data, taiwan_view)
     central_bank_output = build_central_bank_output(central_bank_data)
     
-failed_items = {
-    k: v for k, v in market_data.items()
-    if v.get("status") != "ok"
-}
-if failed_items:
-    logger.error("Failed market items: %s", json.dumps(failed_items, ensure_ascii=False, indent=2))
+def main() -> None:
+    logger.info("Starting scheme A pipeline...")
+
+    market_data = fetch_market_data()
+    foreign_flow_payload = fetch_tw_foreign_flow()
+    taiwan_view = build_taiwan_view(market_data, foreign_flow_payload)
+    central_bank_data = fetch_all_central_banks()
+
+    market_output = build_market_output(market_data, taiwan_view)
+    central_bank_output = build_central_bank_output(central_bank_data)
+
+    failed_items = {
+        k: v for k, v in market_data.items()
+        if v.get("status") != "ok"
+    }
+    if failed_items:
+        logger.error(
+            "Failed market items: %s",
+            json.dumps(failed_items, ensure_ascii=False, indent=2)
+        )
+
     ok_count = market_output["summary_stats"]["ok_count"]
     if ok_count < MIN_OK_COUNT:
         raise RuntimeError(
@@ -743,6 +758,9 @@ if failed_items:
     logger.info("Done. Wrote %s", MARKET_OUTPUT_FILE)
     logger.info("Done. Wrote %s", CENTRAL_BANK_OUTPUT_FILE)
 
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
