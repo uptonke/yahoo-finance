@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-04-22T07:54:33.798255+00:00",
+  "schema_version": "A.1",
+  "source_stack": [
+    "Fed official sources",
+    "ECB official sources",
+    "BOJ official sources",
+    "PBOC/CFETS official sources"
+  ],
+  "central_banks": {
+    "fed": {
+      "status": "ok",
+      "display_name": "Fed",
+      "current_rate": "N/A",
+      "next_meeting": "N/A",
+      "market_pricing_path": "N/A",
+      "sources": {},
+      "notes": [
+        "current_rate_url not configured",
+        "schedule_url not configured",
+        "market_pricing_url not configured"
+      ]
+    },
+    "ecb": {
+      "status": "ok",
+      "display_name": "ECB",
+      "current_rate": "N/A",
+      "next_meeting": "N/A",
+      "market_pricing_path": "N/A",
+      "sources": {},
+      "notes": [
+        "current_rate_url not configured",
+        "schedule_url not configured",
+        "market_pricing_url not configured"
+      ]
+    },
+    "boj": {
+      "status": "ok",
+      "display_name": "BOJ",
+      "current_rate": "N/A",
+      "next_meeting": "N/A",
+      "market_pricing_path": "N/A",
+      "sources": {},
+      "notes": [
+        "current_rate_url not configured",
+        "schedule_url not configured",
+        "market_pricing_url not configured"
+      ]
+    },
+    "pboc": {
+      "status": "ok",
+      "display_name": "PBOC",
+      "current_rate": "N/A",
+      "next_meeting": "N/A",
+      "market_pricing_path": "N/A",
+      "sources": {},
+      "notes": [
+        "current_rate_url not configured",
+        "schedule_url not configured",
+        "market_pricing_url not configured"
+      ]
+    }
+  }
+}
