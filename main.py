@@ -1215,55 +1215,51 @@ def extract_next_ecb_meeting(text: str) -> Optional[str]:
 
 
 def extract_next_boj_meeting(text: str) -> Optional[str]:
-    lines = html_to_lines(text)
+    flat = normalize_whitespace(html_to_visible_text(text))
     today = taipei_now().date()
     year = today.year
 
-    start_idx = None
-    for i, line in enumerate(lines):
-        if f"Table : {year} Date of MPM Release Schedule" in line:
-            start_idx = i
-            break
-
-    if start_idx is not None:
-        block = " ".join(lines[start_idx:start_idx + 40])
-        matches = re.findall(
-            r"([A-Za-z]{3,4})\.?\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
-            block,
-            re.I,
-        )
-
-        for month_name, _day1, day2 in matches:
-            month_num = MONTH_MAP.get(month_name.upper())
-            if not month_num:
-                month_num = MONTH_MAP.get(month_name.upper()[:3])
-            if not month_num:
-                continue
-
-            try:
-                meeting_date = datetime(year, month_num, int(day2)).date()
-                if meeting_date >= today:
-                    return meeting_date.isoformat()
-            except Exception:
-                continue
-
-    flat = normalize_whitespace(html_to_visible_text(text))
-    m = re.search(
-        rf"Table\s*:\s*{year}\s*Date of MPM Release Schedule(.*?)(?:Table\s*:|$)",
+    # 先限縮到當年度 schedule 區塊
+    block_match = re.search(
+        rf"{year}\s*Date of MPM Release Schedule(.*?)(?:{year + 1}\s*Date of MPM Release Schedule|$)",
         flat,
         re.I,
     )
-    if not m:
-        return None
+    block = block_match.group(1) if block_match else flat
 
-    block = m.group(1)
+    # 典型格式：
+    # April 30 (Thu.), May 1 (Fri.)
+    # 或
+    # Apr. 30 (Thu.), May 1 (Fri.)
     matches = re.findall(
-        r"([A-Za-z]{3,4})\.?\s+(\d{1,2})\s+\([A-Za-z]+\),\s+(\d{1,2})\s+\([A-Za-z]+\)",
+        r"([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)\s*,\s*([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)",
         block,
         re.I,
     )
 
-    for month_name, _day1, day2 in matches:
+    for month1_name, _day1, month2_name, day2 in matches:
+        month_num = MONTH_MAP.get(month2_name.upper())
+        if not month_num:
+            month_num = MONTH_MAP.get(month2_name.upper()[:3])
+        if not month_num:
+            continue
+
+        try:
+            meeting_date = datetime(year, month_num, int(day2)).date()
+            if meeting_date >= today:
+                return meeting_date.isoformat()
+        except Exception:
+            continue
+
+    # 備援：同月份寫法
+    # April 30 (Thu.),  May 1 (Fri.)
+    matches_same_month = re.findall(
+        r"([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)\s*,\s*(\d{1,2})\s*\([A-Za-z]{3,}\.?\)",
+        block,
+        re.I,
+    )
+
+    for month_name, _day1, day2 in matches_same_month:
         month_num = MONTH_MAP.get(month_name.upper())
         if not month_num:
             month_num = MONTH_MAP.get(month_name.upper()[:3])
@@ -1407,7 +1403,9 @@ def fetch_boj_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
             text = fetch_text(cfg["schedule_url"])
             parsed_meeting = extract_next_boj_meeting(text)
             if parsed_meeting:
-                result["next_meeting"] = parsed_meeting
+               result["next_meeting"] = parsed_meeting
+            else:
+            result["notes"].append("next BOJ meeting not parsed from schedule page")
             result["sources"]["schedule_url"] = cfg["schedule_url"]
         else:
             result["notes"].append("schedule_url not configured")
@@ -1443,8 +1441,8 @@ def fetch_pboc_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
             text = fetch_text(cfg["schedule_url"])
             latest_meeting = extract_latest_pboc_meeting(text)
             if latest_meeting:
-                result["current_rate_date"] = latest_meeting
                 result["notes"].append(f"latest MPC meeting observed: {latest_meeting}")
+                result["detail"] = {"latest_mpc_meeting_date": latest_meeting}
             result["sources"]["schedule_url"] = cfg["schedule_url"]
         else:
             result["notes"].append("schedule_url not configured")
