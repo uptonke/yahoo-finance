@@ -172,7 +172,7 @@ def build_session() -> requests.Session:
         connect=3,
         backoff_factor=1.5,
         status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=frozenset(["GET"]),
+        allowed_methods=frozenset(["GET", "POST"]),
         raise_on_status=False,
     )
 
@@ -228,10 +228,12 @@ def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
     resp.raise_for_status()
     return resp.json()
 
+
 def post_json(url: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     resp = SESSION.post(url, data=data, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
+
 
 def fetch_text(url: str) -> str:
     resp = SESSION.get(url, timeout=REQUEST_TIMEOUT)
@@ -552,6 +554,59 @@ def format_signed_int(value: Optional[int]) -> str:
     return f"{value:,}"
 
 
+def int_or_none(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def normalize_to_iso_date(date_str: Optional[str]) -> Optional[str]:
+    if not date_str:
+        return None
+
+    s = str(date_str).strip()
+
+    m = re.match(r"^(\d{2,3})/(\d{1,2})/(\d{1,2})$", s)
+    if m:
+        year = int(m.group(1)) + 1911
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
+    m = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
+    m = re.match(r"^(\d{4})(\d{2})(\d{2})$", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+
+    m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
+    return s
+
+
+def build_foreign_flow_structural_read(single_day_raw: Optional[int]) -> str:
+    if single_day_raw is None:
+        return "資料不足，無法判定外資當日方向"
+    if single_day_raw > 0:
+        return "外資當日偏多，上市櫃合計呈現淨買超"
+    if single_day_raw < 0:
+        return "外資當日偏空，上市櫃合計呈現淨賣超"
+    return "外資當日中性，上市櫃合計接近平衡"
+
+
 def taipei_today_yyyymmdd() -> str:
     dt = datetime.now(timezone.utc) + timedelta(hours=8)
     return dt.strftime("%Y%m%d")
@@ -563,7 +618,6 @@ def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
 
     s = str(date_str).strip()
 
-    # 115/04/22 -> 20260422
     m = re.match(r"^(\d{2,3})/(\d{1,2})/(\d{1,2})$", s)
     if m:
         roc_year = int(m.group(1))
@@ -572,7 +626,6 @@ def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
         day = int(m.group(3))
         return f"{year:04d}{month:02d}{day:02d}"
 
-    # 2026/04/22 -> 20260422
     m = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", s)
     if m:
         year = int(m.group(1))
@@ -580,7 +633,6 @@ def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
         day = int(m.group(3))
         return f"{year:04d}{month:02d}{day:02d}"
 
-    # 2026-04-22 -> 20260422
     m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
     if m:
         year = int(m.group(1))
@@ -588,7 +640,6 @@ def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
         day = int(m.group(3))
         return f"{year:04d}{month:02d}{day:02d}"
 
-    # fallback
     return taipei_today_yyyymmdd()
 
 
@@ -597,6 +648,7 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
         return {
             "status": "unconfigured",
             "single_day": "N/A",
+            "single_day_raw": None,
             "date": None,
             "note": "TPEX_FOREIGN_FLOW_API_URL not configured",
         }
@@ -614,6 +666,7 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
             return {
                 "status": "error",
                 "single_day": "N/A",
+                "single_day_raw": None,
                 "date": None,
                 "error": "TPEX API returned no tables",
                 "url": TPEX_FOREIGN_FLOW_API_URL,
@@ -623,7 +676,8 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
 
         table = tables[0]
         rows = table.get("data") or []
-        report_date = table.get("date")
+        report_date_raw = table.get("date")
+        report_date = normalize_to_iso_date(report_date_raw)
         title = table.get("title")
 
         foreign_ex_dealer_net = 0
@@ -652,7 +706,9 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
             return {
                 "status": "error",
                 "single_day": "N/A",
+                "single_day_raw": None,
                 "date": report_date,
+                "raw_date": report_date_raw,
                 "error": "TPEX API returned zero valid rows",
                 "url": TPEX_FOREIGN_FLOW_API_URL,
                 "request_payload": payload,
@@ -662,13 +718,18 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
         return {
             "status": "ok",
             "single_day": format_signed_int(foreign_total_net),
+            "single_day_raw": foreign_total_net,
             "date": report_date,
+            "raw_date": report_date_raw,
             "source": "official_api_json",
             "title": title,
             "row_count": valid_rows,
             "foreign_ex_dealer_single_day": format_signed_int(foreign_ex_dealer_net),
+            "foreign_ex_dealer_single_day_raw": foreign_ex_dealer_net,
             "foreign_total_single_day": format_signed_int(foreign_total_net),
+            "foreign_total_single_day_raw": foreign_total_net,
             "three_insti_total_single_day": format_signed_int(three_insti_total_net),
+            "three_insti_total_single_day_raw": three_insti_total_net,
             "url": TPEX_FOREIGN_FLOW_API_URL,
             "request_payload": payload,
             "note": "Parsed from official TPEX POST API /www/zh-tw/insti/dailyTrade",
@@ -677,6 +738,7 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
         return {
             "status": "error",
             "single_day": "N/A",
+            "single_day_raw": None,
             "date": None,
             "error": str(e),
             "url": TPEX_FOREIGN_FLOW_API_URL,
@@ -689,6 +751,7 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
         return {
             "status": "unconfigured",
             "single_day": "N/A",
+            "single_day_raw": None,
             "date": None,
             "note": "TWSE_FOREIGN_FLOW_API_URL not configured",
         }
@@ -710,7 +773,9 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
             return {
                 "status": "error",
                 "single_day": "N/A",
-                "date": target_date,
+                "single_day_raw": None,
+                "date": normalize_to_iso_date(target_date),
+                "raw_date": target_date,
                 "error": "TWSE API returned no data/fields",
                 "url": TWSE_FOREIGN_FLOW_API_URL,
                 "request_params": params,
@@ -719,7 +784,6 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
 
         field_idx = {name: idx for idx, name in enumerate(fields)}
 
-        # TWSE 官方 T86 常見欄位
         idx_foreign_ex = field_idx.get("外陸資買賣超股數(不含外資自營商)")
         idx_foreign_dealer = field_idx.get("外資自營商買賣超股數")
         idx_three_insti = field_idx.get("三大法人買賣超股數")
@@ -728,7 +792,9 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
             return {
                 "status": "error",
                 "single_day": "N/A",
-                "date": target_date,
+                "single_day_raw": None,
+                "date": normalize_to_iso_date(target_date),
+                "raw_date": target_date,
                 "error": "TWSE API missing field: 外陸資買賣超股數(不含外資自營商)",
                 "url": TWSE_FOREIGN_FLOW_API_URL,
                 "request_params": params,
@@ -761,12 +827,15 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
                 three_insti_total_net += v_three
 
         foreign_total_net = foreign_ex_dealer_net + foreign_dealer_net
+        report_date = normalize_to_iso_date(target_date)
 
         if valid_rows == 0:
             return {
                 "status": "error",
                 "single_day": "N/A",
-                "date": target_date,
+                "single_day_raw": None,
+                "date": report_date,
+                "raw_date": target_date,
                 "error": "TWSE API returned zero valid rows",
                 "url": TWSE_FOREIGN_FLOW_API_URL,
                 "request_params": params,
@@ -776,15 +845,21 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
         return {
             "status": "ok",
             "single_day": format_signed_int(foreign_total_net),
-            "date": target_date,
+            "single_day_raw": foreign_total_net,
+            "date": report_date,
+            "raw_date": target_date,
             "source": "official_api_json",
             "title": raw.get("title"),
             "stat": raw.get("stat"),
             "row_count": valid_rows,
             "foreign_ex_dealer_single_day": format_signed_int(foreign_ex_dealer_net),
+            "foreign_ex_dealer_single_day_raw": foreign_ex_dealer_net,
             "foreign_dealer_single_day": format_signed_int(foreign_dealer_net),
+            "foreign_dealer_single_day_raw": foreign_dealer_net,
             "foreign_total_single_day": format_signed_int(foreign_total_net),
+            "foreign_total_single_day_raw": foreign_total_net,
             "three_insti_total_single_day": format_signed_int(three_insti_total_net),
+            "three_insti_total_single_day_raw": three_insti_total_net,
             "url": TWSE_FOREIGN_FLOW_API_URL,
             "request_params": params,
             "note": "Parsed from official TWSE T86 JSON route.",
@@ -793,7 +868,9 @@ def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[st
         return {
             "status": "error",
             "single_day": "N/A",
-            "date": target_date,
+            "single_day_raw": None,
+            "date": normalize_to_iso_date(target_date),
+            "raw_date": target_date,
             "error": str(e),
             "url": TWSE_FOREIGN_FLOW_API_URL,
             "request_params": params,
@@ -816,34 +893,49 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
     if usd_twd_item.get("status") == "ok":
         usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
 
-    twse_val = clean_int(
-        foreign_flow_payload.get("twse", {}).get("foreign_total_single_day")
-        or foreign_flow_payload.get("twse", {}).get("single_day")
+    twse_raw = int_or_none(
+        foreign_flow_payload.get("twse", {}).get("foreign_total_single_day_raw")
     )
-    tpex_val = clean_int(
-        foreign_flow_payload.get("tpex", {}).get("foreign_total_single_day")
-        or foreign_flow_payload.get("tpex", {}).get("single_day")
+    if twse_raw is None:
+        twse_raw = clean_int(
+            foreign_flow_payload.get("twse", {}).get("foreign_total_single_day")
+            or foreign_flow_payload.get("twse", {}).get("single_day")
+        )
+
+    tpex_raw = int_or_none(
+        foreign_flow_payload.get("tpex", {}).get("foreign_total_single_day_raw")
     )
+    if tpex_raw is None:
+        tpex_raw = clean_int(
+            foreign_flow_payload.get("tpex", {}).get("foreign_total_single_day")
+            or foreign_flow_payload.get("tpex", {}).get("single_day")
+        )
 
     combined_val = None
-    if twse_val is not None and tpex_val is not None:
-        combined_val = twse_val + tpex_val
+    if twse_raw is not None and tpex_raw is not None:
+        combined_val = twse_raw + tpex_raw
         source_used = "twse+tpex"
-    elif twse_val is not None:
-        combined_val = twse_val
+    elif twse_raw is not None:
+        combined_val = twse_raw
         source_used = "twse"
-    elif tpex_val is not None:
-        combined_val = tpex_val
+    elif tpex_raw is not None:
+        combined_val = tpex_raw
         source_used = "tpex"
     else:
         source_used = None
 
+    twse_date = foreign_flow_payload.get("twse", {}).get("date")
+    tpex_date = foreign_flow_payload.get("tpex", {}).get("date")
+    flow_date = twse_date or tpex_date
+
     return {
         "foreign_flow": {
             "single_day": format_signed_int(combined_val),
+            "single_day_raw": combined_val,
+            "date": flow_date,
             "source_used": source_used,
             "market_scope": "listed+otc" if source_used == "twse+tpex" else source_used,
-            "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）",
+            "structural_read": build_foreign_flow_structural_read(combined_val),
             "source_payload": foreign_flow_payload,
         },
         "semiconductor_supply_chain": {
@@ -1017,7 +1109,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.6",
+        "schema_version": "A.7",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -1033,7 +1125,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.6",
+        "schema_version": "A.7",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
