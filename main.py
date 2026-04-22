@@ -364,7 +364,7 @@ def normalize_whitespace(text: str) -> str:
 
 def extract_first_match(text: str, patterns: list[str]) -> Optional[str]:
     for pattern in patterns:
-        match = re.search(pattern, text, re.S)
+        match = re.search(pattern, text, re.S | re.I)
         if match:
             return normalize_whitespace(match.group(1))
     return None
@@ -502,6 +502,13 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
 def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
     flat = normalize_whitespace(text)
 
+    title = extract_first_match(
+        flat,
+        [
+            r"<title>(.*?)</title>",
+        ],
+    )
+
     date_value = extract_first_match(
         flat,
         [
@@ -523,7 +530,7 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
 
     snippet = None
     snippet_match = re.search(
-        r"(外資及陸資.{0,200}?(?:淨買|買賣超).{0,80})",
+        r"(外資.{0,200}(?:淨買|買賣超).{0,120})",
         flat,
         re.S,
     )
@@ -531,12 +538,13 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
         snippet = normalize_whitespace(snippet_match.group(1))[:300]
 
     return {
-        "status": "ok" if (date_value or single_day or snippet) else "todo",
+        "status": "ok" if (title or date_value or single_day or snippet) else "todo",
         "single_day": single_day or "N/A",
         "date": date_value,
         "source": "official_page_html",
+        "title": title,
         "snippet": snippet,
-        "note": "Parsed from official page HTML with regex; may need tightening if page structure changes.",
+        "note": "Parsed from official page HTML with regex; may need API/CSV if page is JS-rendered.",
     }
 
 
@@ -559,6 +567,8 @@ def fetch_tw_foreign_flow() -> Dict[str, Any]:
             text = fetch_text(TW_TWSE_URL)
             parsed = parse_tw_official_foreign_flow(text)
             parsed["url"] = TW_TWSE_URL
+            parsed["html_length"] = len(text)
+            parsed["html_preview"] = normalize_whitespace(text)[:500]
             result["twse"] = parsed
         except Exception as e:
             result["twse"] = {
@@ -572,8 +582,15 @@ def fetch_tw_foreign_flow() -> Dict[str, Any]:
     if TW_TPEX_URL:
         try:
             text = fetch_text(TW_TPEX_URL)
+
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            with open(OUTPUT_DIR / "tpex_raw.html", "w", encoding="utf-8") as f:
+                f.write(text)
+
             parsed = parse_tw_official_foreign_flow(text)
             parsed["url"] = TW_TPEX_URL
+            parsed["html_length"] = len(text)
+            parsed["html_preview"] = normalize_whitespace(text)[:500]
             result["tpex"] = parsed
         except Exception as e:
             result["tpex"] = {
@@ -784,7 +801,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.3",
+        "schema_version": "A.4",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -800,7 +817,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.3",
+        "schema_version": "A.4",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
