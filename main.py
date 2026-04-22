@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -144,6 +144,12 @@ CENTRAL_BANK_SOURCE_CONFIG = {
 
 TW_TWSE_URL = os.getenv("TWSE_FOREIGN_FLOW_URL", "").strip()
 TW_TPEX_URL = os.getenv("TPEX_FOREIGN_FLOW_URL", "").strip()
+
+TWSE_FOREIGN_FLOW_API_URL = os.getenv(
+    "TWSE_FOREIGN_FLOW_API_URL",
+    "https://www.twse.com.tw/rwd/zh/fund/T86",
+).strip()
+TWSE_FOREIGN_FLOW_SELECT_TYPE = os.getenv("TWSE_FOREIGN_FLOW_SELECT_TYPE", "ALLBUT0999").strip()
 
 TPEX_FOREIGN_FLOW_API_URL = os.getenv(
     "TPEX_FOREIGN_FLOW_API_URL",
@@ -546,6 +552,46 @@ def format_signed_int(value: Optional[int]) -> str:
     return f"{value:,}"
 
 
+def taipei_today_yyyymmdd() -> str:
+    dt = datetime.now(timezone.utc) + timedelta(hours=8)
+    return dt.strftime("%Y%m%d")
+
+
+def roc_or_gregorian_to_yyyymmdd(date_str: Optional[str]) -> str:
+    if not date_str:
+        return taipei_today_yyyymmdd()
+
+    s = str(date_str).strip()
+
+    # 115/04/22 -> 20260422
+    m = re.match(r"^(\d{2,3})/(\d{1,2})/(\d{1,2})$", s)
+    if m:
+        roc_year = int(m.group(1))
+        year = roc_year + 1911
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}{month:02d}{day:02d}"
+
+    # 2026/04/22 -> 20260422
+    m = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}{month:02d}{day:02d}"
+
+    # 2026-04-22 -> 20260422
+    m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        return f"{year:04d}{month:02d}{day:02d}"
+
+    # fallback
+    return taipei_today_yyyymmdd()
+
+
 def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
     if not TPEX_FOREIGN_FLOW_API_URL:
         return {
@@ -589,10 +635,6 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
             if not isinstance(row, list) or len(row) < 24:
                 continue
 
-            # 依你抓到的 API response 結構：
-            # row[4]  = 外資及陸資(不含外資自營商) 買賣超股數
-            # row[10] = 外資及陸資 買賣超股數
-            # row[23] = 三大法人買賣超股數合計
             v_ex_dealer = clean_int(row[4])
             v_foreign_total = clean_int(row[10])
             v_three_insti = clean_int(row[23])
@@ -642,32 +684,130 @@ def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
         }
 
 
-def fetch_tw_foreign_flow() -> Dict[str, Any]:
-    result = {
-        "twse": {
+def fetch_twse_foreign_flow_api(reference_date: Optional[str] = None) -> Dict[str, Any]:
+    if not TWSE_FOREIGN_FLOW_API_URL:
+        return {
             "status": "unconfigured",
             "single_day": "N/A",
             "date": None,
-        },
-        "tpex": {
-            "status": "unconfigured",
-            "single_day": "N/A",
-            "date": None,
-        },
-    }
-
-    # 先保留 TWSE 空位，之後再補 API
-    if TW_TWSE_URL:
-        result["twse"] = {
-            "status": "todo",
-            "single_day": "N/A",
-            "date": None,
-            "url": TW_TWSE_URL,
-            "note": "TWSE API not wired yet.",
+            "note": "TWSE_FOREIGN_FLOW_API_URL not configured",
         }
 
-    result["tpex"] = fetch_tpex_foreign_flow_api()
-    return result
+    target_date = roc_or_gregorian_to_yyyymmdd(reference_date)
+    params = {
+        "response": "json",
+        "date": target_date,
+        "selectType": TWSE_FOREIGN_FLOW_SELECT_TYPE or "ALLBUT0999",
+    }
+
+    try:
+        raw = fetch_json(TWSE_FOREIGN_FLOW_API_URL, params=params)
+
+        rows = raw.get("data") or []
+        fields = raw.get("fields") or []
+
+        if not rows or not fields:
+            return {
+                "status": "error",
+                "single_day": "N/A",
+                "date": target_date,
+                "error": "TWSE API returned no data/fields",
+                "url": TWSE_FOREIGN_FLOW_API_URL,
+                "request_params": params,
+                "raw_payload": raw,
+            }
+
+        field_idx = {name: idx for idx, name in enumerate(fields)}
+
+        # TWSE 官方 T86 常見欄位
+        idx_foreign_ex = field_idx.get("外陸資買賣超股數(不含外資自營商)")
+        idx_foreign_dealer = field_idx.get("外資自營商買賣超股數")
+        idx_three_insti = field_idx.get("三大法人買賣超股數")
+
+        if idx_foreign_ex is None:
+            return {
+                "status": "error",
+                "single_day": "N/A",
+                "date": target_date,
+                "error": "TWSE API missing field: 外陸資買賣超股數(不含外資自營商)",
+                "url": TWSE_FOREIGN_FLOW_API_URL,
+                "request_params": params,
+                "fields": fields,
+            }
+
+        foreign_ex_dealer_net = 0
+        foreign_dealer_net = 0
+        three_insti_total_net = 0
+        valid_rows = 0
+
+        for row in rows:
+            if not isinstance(row, list):
+                continue
+            if idx_foreign_ex >= len(row):
+                continue
+
+            v_ex = clean_int(row[idx_foreign_ex])
+            v_dealer = clean_int(row[idx_foreign_dealer]) if idx_foreign_dealer is not None and idx_foreign_dealer < len(row) else 0
+            v_three = clean_int(row[idx_three_insti]) if idx_three_insti is not None and idx_three_insti < len(row) else None
+
+            if v_ex is not None:
+                foreign_ex_dealer_net += v_ex
+                valid_rows += 1
+
+            if v_dealer is not None:
+                foreign_dealer_net += v_dealer
+
+            if v_three is not None:
+                three_insti_total_net += v_three
+
+        foreign_total_net = foreign_ex_dealer_net + foreign_dealer_net
+
+        if valid_rows == 0:
+            return {
+                "status": "error",
+                "single_day": "N/A",
+                "date": target_date,
+                "error": "TWSE API returned zero valid rows",
+                "url": TWSE_FOREIGN_FLOW_API_URL,
+                "request_params": params,
+                "raw_payload": raw,
+            }
+
+        return {
+            "status": "ok",
+            "single_day": format_signed_int(foreign_total_net),
+            "date": target_date,
+            "source": "official_api_json",
+            "title": raw.get("title"),
+            "stat": raw.get("stat"),
+            "row_count": valid_rows,
+            "foreign_ex_dealer_single_day": format_signed_int(foreign_ex_dealer_net),
+            "foreign_dealer_single_day": format_signed_int(foreign_dealer_net),
+            "foreign_total_single_day": format_signed_int(foreign_total_net),
+            "three_insti_total_single_day": format_signed_int(three_insti_total_net),
+            "url": TWSE_FOREIGN_FLOW_API_URL,
+            "request_params": params,
+            "note": "Parsed from official TWSE T86 JSON route.",
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "single_day": "N/A",
+            "date": target_date,
+            "error": str(e),
+            "url": TWSE_FOREIGN_FLOW_API_URL,
+            "request_params": params,
+        }
+
+
+def fetch_tw_foreign_flow() -> Dict[str, Any]:
+    tpex_payload = fetch_tpex_foreign_flow_api()
+    twse_payload = fetch_twse_foreign_flow_api(reference_date=tpex_payload.get("date"))
+
+    return {
+        "twse": twse_payload,
+        "tpex": tpex_payload,
+    }
 
 
 def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -676,23 +816,33 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
     if usd_twd_item.get("status") == "ok":
         usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
 
-    single_day = "N/A"
-    source_used = None
+    twse_val = clean_int(
+        foreign_flow_payload.get("twse", {}).get("foreign_total_single_day")
+        or foreign_flow_payload.get("twse", {}).get("single_day")
+    )
+    tpex_val = clean_int(
+        foreign_flow_payload.get("tpex", {}).get("foreign_total_single_day")
+        or foreign_flow_payload.get("tpex", {}).get("single_day")
+    )
 
-    twse_single = foreign_flow_payload.get("twse", {}).get("single_day")
-    tpex_single = foreign_flow_payload.get("tpex", {}).get("single_day")
-
-    if twse_single not in (None, "", "N/A"):
-        single_day = twse_single
+    combined_val = None
+    if twse_val is not None and tpex_val is not None:
+        combined_val = twse_val + tpex_val
+        source_used = "twse+tpex"
+    elif twse_val is not None:
+        combined_val = twse_val
         source_used = "twse"
-    elif tpex_single not in (None, "", "N/A"):
-        single_day = tpex_single
+    elif tpex_val is not None:
+        combined_val = tpex_val
         source_used = "tpex"
+    else:
+        source_used = None
 
     return {
         "foreign_flow": {
-            "single_day": single_day,
+            "single_day": format_signed_int(combined_val),
             "source_used": source_used,
+            "market_scope": "listed+otc" if source_used == "twse+tpex" else source_used,
             "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）",
             "source_payload": foreign_flow_payload,
         },
