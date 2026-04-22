@@ -25,6 +25,13 @@ jobs:
       TD_WTI_SYMBOL: "WTI"
       FRED_USDTWD_SERIES: "DEXTAUS"
 
+      FED_LOWER_SERIES_ID: "DFEDTARL"
+      FED_UPPER_SERIES_ID: "DFEDTARU"
+
+      ECB_MRR_SERIES_KEY: "D.U2.EUR.4F.KR.MRR_RT.LEV"
+      ECB_DFR_SERIES_KEY: "D.U2.EUR.4F.KR.DFR.LEV"
+      ECB_MLFR_SERIES_KEY: "D.U2.EUR.4F.KR.MLFR.LEV"
+
       TWSE_FOREIGN_FLOW_API_URL: "https://www.twse.com.tw/rwd/zh/fund/T86"
       TWSE_FOREIGN_FLOW_SELECT_TYPE: "ALLBUT0999"
 
@@ -45,7 +52,7 @@ jobs:
       BOJ_MARKET_PRICING_URL: "https://www.boj.or.jp/en/mopo/mpmdeci/state_2026/index.htm"
 
       PBOC_RATE_URL: "https://www.pbc.gov.cn/en/3688229/3688335/3883798/index.html"
-      PBOC_SCHEDULE_URL: ""
+      PBOC_SCHEDULE_URL: "https://www.pbc.gov.cn/en/3688229/3688311/3688329/index.html"
       PBOC_MARKET_PRICING_URL: ""
 
     steps:
