@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
@@ -9,9 +10,10 @@ import yfinance as yf
 
 OUTPUT_FILE = "data/market_data.json"
 DEFAULT_HISTORY_PERIOD = "1mo"
-MAX_RETRIES = 3
-RETRY_SLEEP_SECONDS = 1.5
 
+# 批次抓取重試
+BATCH_RETRIES = 3
+BATCH_BACKOFF_SECONDS = [20, 60, 120]
 
 INSTRUMENTS: Dict[str, Dict[str, Any]] = {
     "sp500": {
@@ -215,9 +217,6 @@ def format_close(close: Optional[float], instrument: Dict[str, Any], unit: Optio
 
     if currency == "PERCENT":
         return f"{format_number(close, decimals)}%"
-    if currency in {"USD", "TWD", "INDEX_POINTS", "TWD_PER_USD"}:
-        return format_number(close, decimals)
-
     return format_number(close, decimals)
 
 
@@ -317,111 +316,136 @@ def build_error_result(instrument: Dict[str, Any], message: str) -> Dict[str, An
     }
 
 
-def fetch_instrument(key: str, instrument: Dict[str, Any]) -> Dict[str, Any]:
-    symbol = instrument["symbol"]
+def download_all_symbols(symbols: list[str]) -> pd.DataFrame:
     last_error = None
 
-    for attempt in range(1, MAX_RETRIES + 1):
+    for i in range(BATCH_RETRIES):
         try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(
+            df = yf.download(
+                tickers=symbols,
                 period=DEFAULT_HISTORY_PERIOD,
+                interval="1d",
                 auto_adjust=False,
                 actions=False,
+                progress=False,
+                threads=False,
+                group_by="ticker",
+                multi_level_index=True,
+                timeout=20,
             )
-
-            if hist.empty:
-                return build_error_result(instrument, "no data")
-
-            hist = hist.dropna(subset=["Close"])
-            if hist.empty:
-                return build_error_result(instrument, "no close data")
-
-            latest = hist.iloc[-1]
-            latest_raw = float(latest["Close"])
-            latest_value, transformed_unit = transform_price(latest_raw, instrument)
-
-            latest_date = hist.index[-1].strftime("%Y-%m-%d")
-            decimals = instrument.get("decimals", 2)
-
-            close = safe_round(latest_value, decimals)
-            freshness_days = get_freshness_days(latest_date)
-            is_latest_trading_day = infer_is_latest_trading_day(latest_date)
-            market_session_label = infer_market_session_label(is_latest_trading_day)
-
-            result: Dict[str, Any] = {
-                "status": "ok",
-                "display_name": instrument["display_name"],
-                "symbol": symbol,
-                "asset_class": instrument["asset_class"],
-                "report_category": instrument["report_category"],
-                "market": instrument["market"],
-                "currency": instrument["currency"],
-                "priority": instrument["priority"],
-                "unit": transformed_unit,
-                "date": latest_date,
-                "close": close,
-                "raw_close": safe_round(latest_raw, 6),
-                "freshness_days": freshness_days,
-                "is_latest_trading_day": is_latest_trading_day,
-                "market_session_label": market_session_label,
-                "display_close": format_close(close, instrument, transformed_unit),
-                "as_of_label": build_as_of_label(latest_date, market_session_label),
-            }
-
-            if len(hist) >= 2:
-                prev = hist.iloc[-2]
-                prev_raw = float(prev["Close"])
-                prev_value, _ = transform_price(prev_raw, instrument)
-
-                prev_date = hist.index[-2].strftime("%Y-%m-%d")
-                prev_close = safe_round(prev_value, decimals)
-
-                change, change_pct = calculate_change_metrics(
-                    close=close,
-                    prev_close=prev_close,
-                    price_digits=decimals,
-                    pct_digits=2,
-                )
-                direction = infer_direction(change)
-
-                result.update({
-                    "prev_date": prev_date,
-                    "prev_close": prev_close,
-                    "raw_prev_close": safe_round(prev_raw, 6),
-                    "change": change,
-                    "change_pct": change_pct,
-                    "direction": direction,
-                    "display_change": format_change(change, change_pct, instrument, transformed_unit),
-                    "macro_signal_tag": infer_macro_signal_tag(key, direction),
-                    "surprise_flag": infer_surprise_flag(instrument["asset_class"], change_pct),
-                })
-            else:
-                result.update({
-                    "prev_date": None,
-                    "prev_close": None,
-                    "raw_prev_close": None,
-                    "change": None,
-                    "change_pct": None,
-                    "direction": "unknown",
-                    "display_change": "N/A",
-                    "macro_signal_tag": None,
-                    "surprise_flag": None,
-                    "warning": "only one valid trading day found; change metrics unavailable",
-                })
-
-            result["llm_hint"] = build_llm_hint(result)
-            return result
-
+            if df is not None and not df.empty:
+                return df
+            last_error = "empty dataframe"
         except Exception as e:
             last_error = str(e)
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_SLEEP_SECONDS)
 
-    return build_error_result(
-        instrument,
-        f"fetch failed after {MAX_RETRIES} retries: {last_error}"
-    )
+        if i < BATCH_RETRIES - 1:
+            wait_s = BATCH_BACKOFF_SECONDS[i]
+            print(f"Batch download failed ({last_error}). Sleep {wait_s}s then retry...")
+            time.sleep(wait_s)
+
+    raise RuntimeError(f"batch download failed after {BATCH_RETRIES} retries: {last_error}")
+
+
+def extract_symbol_history(batch_df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    if batch_df.empty:
+        return pd.DataFrame()
+
+    if isinstance(batch_df.columns, pd.MultiIndex):
+        level0 = batch_df.columns.get_level_values(0)
+        if symbol not in level0:
+            return pd.DataFrame()
+        df = batch_df[symbol].copy()
+    else:
+        # 理論上多 ticker 不太會走到這裡，但保底
+        df = batch_df.copy()
+
+    if "Close" not in df.columns:
+        return pd.DataFrame()
+
+    df = df.dropna(subset=["Close"])
+    return df
+
+
+def build_instrument_result(key: str, instrument: Dict[str, Any], hist: pd.DataFrame) -> Dict[str, Any]:
+    if hist.empty:
+        return build_error_result(instrument, "no data returned for symbol")
+
+    latest = hist.iloc[-1]
+    latest_raw = float(latest["Close"])
+    latest_value, transformed_unit = transform_price(latest_raw, instrument)
+
+    latest_date = hist.index[-1].strftime("%Y-%m-%d")
+    decimals = instrument.get("decimals", 2)
+
+    close = safe_round(latest_value, decimals)
+    freshness_days = get_freshness_days(latest_date)
+    is_latest_trading_day = infer_is_latest_trading_day(latest_date)
+    market_session_label = infer_market_session_label(is_latest_trading_day)
+
+    result: Dict[str, Any] = {
+        "status": "ok",
+        "display_name": instrument["display_name"],
+        "symbol": instrument["symbol"],
+        "asset_class": instrument["asset_class"],
+        "report_category": instrument["report_category"],
+        "market": instrument["market"],
+        "currency": instrument["currency"],
+        "priority": instrument["priority"],
+        "unit": transformed_unit,
+        "date": latest_date,
+        "close": close,
+        "raw_close": safe_round(latest_raw, 6),
+        "freshness_days": freshness_days,
+        "is_latest_trading_day": is_latest_trading_day,
+        "market_session_label": market_session_label,
+        "display_close": format_close(close, instrument, transformed_unit),
+        "as_of_label": build_as_of_label(latest_date, market_session_label),
+    }
+
+    if len(hist) >= 2:
+        prev = hist.iloc[-2]
+        prev_raw = float(prev["Close"])
+        prev_value, _ = transform_price(prev_raw, instrument)
+
+        prev_date = hist.index[-2].strftime("%Y-%m-%d")
+        prev_close = safe_round(prev_value, decimals)
+
+        change, change_pct = calculate_change_metrics(
+            close=close,
+            prev_close=prev_close,
+            price_digits=decimals,
+            pct_digits=2,
+        )
+        direction = infer_direction(change)
+
+        result.update({
+            "prev_date": prev_date,
+            "prev_close": prev_close,
+            "raw_prev_close": safe_round(prev_raw, 6),
+            "change": change,
+            "change_pct": change_pct,
+            "direction": direction,
+            "display_change": format_change(change, change_pct, instrument, transformed_unit),
+            "macro_signal_tag": infer_macro_signal_tag(key, direction),
+            "surprise_flag": infer_surprise_flag(instrument["asset_class"], change_pct),
+        })
+    else:
+        result.update({
+            "prev_date": None,
+            "prev_close": None,
+            "raw_prev_close": None,
+            "change": None,
+            "change_pct": None,
+            "direction": "unknown",
+            "display_change": "N/A",
+            "macro_signal_tag": None,
+            "surprise_flag": None,
+            "warning": "only one valid trading day found; change metrics unavailable",
+        })
+
+    result["llm_hint"] = build_llm_hint(result)
+    return result
 
 
 def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -507,16 +531,26 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
 
 def main() -> None:
     market_data: Dict[str, Dict[str, Any]] = {}
+    symbols = [cfg["symbol"] for _, cfg in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"])]
+
+    try:
+        batch_df = download_all_symbols(symbols)
+    except Exception as e:
+        print(f"FATAL: {e}")
+        # 全批失敗時，直接讓 workflow fail，避免把舊資料覆蓋成全 error JSON
+        sys.exit(1)
 
     for key, instrument in sorted(INSTRUMENTS.items(), key=lambda x: x[1]["priority"]):
-        print(f"Fetching {instrument['display_name']} ({instrument['symbol']})...")
-        result = fetch_instrument(key, instrument)
+        symbol = instrument["symbol"]
+        print(f"Processing {instrument['display_name']} ({symbol})...")
+        hist = extract_symbol_history(batch_df, symbol)
+        result = build_instrument_result(key, instrument, hist)
         market_data[key] = result
         print(f"  -> {result}")
 
     output = {
         "generated_at": get_now_utc_iso(),
-        "schema_version": "Z.1",
+        "schema_version": "Z.2",
         "source": "Yahoo Finance via yfinance",
         "note": (
             "Each instrument contains the latest available close and previous valid close. "
@@ -530,8 +564,12 @@ def main() -> None:
         "market_data": market_data,
     }
 
-    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+    ok_count = output["summary_stats"]["ok_count"]
+    if ok_count == 0:
+        print("FATAL: ok_count == 0, refuse to overwrite previous snapshot.")
+        sys.exit(1)
 
+    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
