@@ -145,6 +145,13 @@ CENTRAL_BANK_SOURCE_CONFIG = {
 TW_TWSE_URL = os.getenv("TWSE_FOREIGN_FLOW_URL", "").strip()
 TW_TPEX_URL = os.getenv("TPEX_FOREIGN_FLOW_URL", "").strip()
 
+TPEX_FOREIGN_FLOW_API_URL = os.getenv(
+    "TPEX_FOREIGN_FLOW_API_URL",
+    "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade",
+).strip()
+TPEX_FOREIGN_FLOW_SECT = os.getenv("TPEX_FOREIGN_FLOW_SECT", "AL").strip()
+TPEX_FOREIGN_FLOW_TYPE = os.getenv("TPEX_FOREIGN_FLOW_TYPE", "Daily").strip()
+
 # =========================================================
 # 2. Session / HTTP helpers
 # =========================================================
@@ -215,6 +222,10 @@ def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, A
     resp.raise_for_status()
     return resp.json()
 
+def post_json(url: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    resp = SESSION.post(url, data=data, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
 
 def fetch_text(url: str) -> str:
     resp = SESSION.get(url, timeout=REQUEST_TIMEOUT)
@@ -517,66 +528,118 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
 # =========================================================
 
 
-def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
-    flat = normalize_whitespace(text)
+def clean_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    s = str(value).strip().replace(",", "")
+    if s in {"", "-", "--", "N/A", "None"}:
+        return None
+    try:
+        return int(s)
+    except Exception:
+        return None
 
-    title = extract_first_match(
-        flat,
-        [
-            r"<title>(.*?)</title>",
-        ],
-    )
 
-    date_value = extract_first_match(
-        flat,
-        [
-            r"資料日期[:：]?\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
-            r"日期[:：]?\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
-            r"Date[:：]?\s*([0-9]{4}/[0-9]{1,2}/[0-9]{1,2})",
-            r"([0-9]{4}/[0-9]{2}/[0-9]{2})",
-        ],
-    )
+def format_signed_int(value: Optional[int]) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:,}"
 
-    snippet = None
-    snippet_match = re.search(
-        r"(外資.{0,250}?(?:淨買|買賣超).{0,120})",
-        flat,
-        re.S,
-    )
-    if snippet_match:
-        snippet = normalize_whitespace(snippet_match.group(1))[:300]
 
-    client_side_rendered = (
-        'id="tables-content"></div>' in text
-        and "tables.init(" in text
-        and 'action:"insti/dailyTrade"' in text
-    )
+def fetch_tpex_foreign_flow_api() -> Dict[str, Any]:
+    if not TPEX_FOREIGN_FLOW_API_URL:
+        return {
+            "status": "unconfigured",
+            "single_day": "N/A",
+            "date": None,
+            "note": "TPEX_FOREIGN_FLOW_API_URL not configured",
+        }
 
-    single_day = "N/A"
-
-    possible_real_value = extract_first_match(
-        flat,
-        [
-            r"</th><td[^>]*>\s*([\-]?[0-9,]+)\s*</td>",
-            r"<td[^>]*>\s*([\-]?[0-9,]{2,})\s*</td>",
-        ],
-    )
-    if possible_real_value and possible_real_value not in {"0,", ",", "-", "--"}:
-        single_day = possible_real_value
-
-    status = "shell_page" if client_side_rendered else ("ok" if (title or date_value or snippet) else "todo")
-
-    return {
-        "status": status,
-        "single_day": single_day,
-        "date": date_value,
-        "source": "official_page_html",
-        "title": title,
-        "snippet": snippet,
-        "client_side_rendered": client_side_rendered,
-        "api_action_hint": "insti/dailyTrade" if client_side_rendered else None,
-        "note": "HTML page is a shell page when client_side_rendered=true; fetch underlying API instead of parsing page text.",
+    payload = {
+        "type": TPEX_FOREIGN_FLOW_TYPE or "Daily",
+        "sect": TPEX_FOREIGN_FLOW_SECT or "AL",
     }
+
+    try:
+        raw = post_json(TPEX_FOREIGN_FLOW_API_URL, data=payload)
+
+        tables = raw.get("tables") or []
+        if not tables:
+            return {
+                "status": "error",
+                "single_day": "N/A",
+                "date": None,
+                "error": "TPEX API returned no tables",
+                "url": TPEX_FOREIGN_FLOW_API_URL,
+                "request_payload": payload,
+                "raw_payload": raw,
+            }
+
+        table = tables[0]
+        rows = table.get("data") or []
+        report_date = table.get("date")
+        title = table.get("title")
+
+        foreign_ex_dealer_net = 0
+        foreign_total_net = 0
+        three_insti_total_net = 0
+        valid_rows = 0
+
+        for row in rows:
+            if not isinstance(row, list) or len(row) < 24:
+                continue
+
+            # 依你抓到的 API response 結構：
+            # row[4]  = 外資及陸資(不含外資自營商) 買賣超股數
+            # row[10] = 外資及陸資 買賣超股數
+            # row[23] = 三大法人買賣超股數合計
+            v_ex_dealer = clean_int(row[4])
+            v_foreign_total = clean_int(row[10])
+            v_three_insti = clean_int(row[23])
+
+            if v_ex_dealer is not None:
+                foreign_ex_dealer_net += v_ex_dealer
+            if v_foreign_total is not None:
+                foreign_total_net += v_foreign_total
+            if v_three_insti is not None:
+                three_insti_total_net += v_three_insti
+
+            valid_rows += 1
+
+        if valid_rows == 0:
+            return {
+                "status": "error",
+                "single_day": "N/A",
+                "date": report_date,
+                "error": "TPEX API returned zero valid rows",
+                "url": TPEX_FOREIGN_FLOW_API_URL,
+                "request_payload": payload,
+                "raw_payload": raw,
+            }
+
+        return {
+            "status": "ok",
+            "single_day": format_signed_int(foreign_total_net),
+            "date": report_date,
+            "source": "official_api_json",
+            "title": title,
+            "row_count": valid_rows,
+            "foreign_ex_dealer_single_day": format_signed_int(foreign_ex_dealer_net),
+            "foreign_total_single_day": format_signed_int(foreign_total_net),
+            "three_insti_total_single_day": format_signed_int(three_insti_total_net),
+            "url": TPEX_FOREIGN_FLOW_API_URL,
+            "request_payload": payload,
+            "note": "Parsed from official TPEX POST API /www/zh-tw/insti/dailyTrade",
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "single_day": "N/A",
+            "date": None,
+            "error": str(e),
+            "url": TPEX_FOREIGN_FLOW_API_URL,
+            "request_payload": payload,
+        }
 
 
 def fetch_tw_foreign_flow() -> Dict[str, Any]:
@@ -593,45 +656,17 @@ def fetch_tw_foreign_flow() -> Dict[str, Any]:
         },
     }
 
+    # 先保留 TWSE 空位，之後再補 API
     if TW_TWSE_URL:
-        try:
-            text = fetch_text(TW_TWSE_URL)
-            parsed = parse_tw_official_foreign_flow(text)
-            parsed["url"] = TW_TWSE_URL
-            parsed["html_length"] = len(text)
-            parsed["html_preview"] = normalize_whitespace(text)[:500]
-            result["twse"] = parsed
-        except Exception as e:
-            result["twse"] = {
-                "status": "error",
-                "single_day": "N/A",
-                "date": None,
-                "error": str(e),
-                "url": TW_TWSE_URL,
-            }
+        result["twse"] = {
+            "status": "todo",
+            "single_day": "N/A",
+            "date": None,
+            "url": TW_TWSE_URL,
+            "note": "TWSE API not wired yet.",
+        }
 
-    if TW_TPEX_URL:
-        try:
-            text = fetch_text(TW_TPEX_URL)
-
-            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            with open(OUTPUT_DIR / "tpex_raw.html", "w", encoding="utf-8") as f:
-                f.write(text)
-
-            parsed = parse_tw_official_foreign_flow(text)
-            parsed["url"] = TW_TPEX_URL
-            parsed["html_length"] = len(text)
-            parsed["html_preview"] = normalize_whitespace(text)[:500]
-            result["tpex"] = parsed
-        except Exception as e:
-            result["tpex"] = {
-                "status": "error",
-                "single_day": "N/A",
-                "date": None,
-                "error": str(e),
-                "url": TW_TPEX_URL,
-            }
-
+    result["tpex"] = fetch_tpex_foreign_flow_api()
     return result
 
 
