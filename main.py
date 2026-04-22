@@ -358,6 +358,18 @@ def build_ok_result(
     return result
 
 
+def normalize_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def extract_first_match(text: str, patterns: list[str]) -> Optional[str]:
+    for pattern in patterns:
+        match = re.search(pattern, text, re.S)
+        if match:
+            return normalize_whitespace(match.group(1))
+    return None
+
+
 # =========================================================
 # 4. Twelve Data
 # =========================================================
@@ -483,17 +495,48 @@ def fetch_market_from_fred(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # =========================================================
-# 6. 台灣外資動向（骨架）
+# 6. 台灣外資動向
 # =========================================================
 
 
 def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
+    flat = normalize_whitespace(text)
+
+    date_value = extract_first_match(
+        flat,
+        [
+            r"資料日期[:：]\s*([0-9]{3,4}/[0-9]{1,2}/[0-9]{1,2})",
+            r"Date[:：]\s*([0-9]{4}/[0-9]{1,2}/[0-9]{1,2})",
+            r"([0-9]{4}/[0-9]{2}/[0-9]{2})",
+        ],
+    )
+
+    single_day = extract_first_match(
+        flat,
+        [
+            r"外資及陸資淨買股數[^0-9\-]*([\-]?[0-9,]+)",
+            r"外資及陸資買賣超股數[^0-9\-]*([\-]?[0-9,]+)",
+            r"外資買賣超[^0-9\-]*([\-]?[0-9,]+)",
+            r"Foreign[^0-9\-]{0,80}Net Buy[^0-9\-]*([\-]?[0-9,]+)",
+        ],
+    )
+
+    snippet = None
+    snippet_match = re.search(
+        r"(外資及陸資.{0,200}?(?:淨買|買賣超).{0,80})",
+        flat,
+        re.S,
+    )
+    if snippet_match:
+        snippet = normalize_whitespace(snippet_match.group(1))[:300]
+
     return {
-        "status": "todo",
-        "single_day": "N/A",
-        "date": None,
-        "source": None,
-        "note": "TW official parser not implemented yet.",
+        "status": "ok" if (date_value or single_day or snippet) else "todo",
+        "single_day": single_day or "N/A",
+        "date": date_value,
+        "source": "official_page_html",
+        "snippet": snippet,
+        "note": "Parsed from official page HTML with regex; may need tightening if page structure changes.",
     }
 
 
@@ -514,25 +557,31 @@ def fetch_tw_foreign_flow() -> Dict[str, Any]:
     if TW_TWSE_URL:
         try:
             text = fetch_text(TW_TWSE_URL)
-            result["twse"] = parse_tw_official_foreign_flow(text)
+            parsed = parse_tw_official_foreign_flow(text)
+            parsed["url"] = TW_TWSE_URL
+            result["twse"] = parsed
         except Exception as e:
             result["twse"] = {
                 "status": "error",
                 "single_day": "N/A",
                 "date": None,
                 "error": str(e),
+                "url": TW_TWSE_URL,
             }
 
     if TW_TPEX_URL:
         try:
             text = fetch_text(TW_TPEX_URL)
-            result["tpex"] = parse_tw_official_foreign_flow(text)
+            parsed = parse_tw_official_foreign_flow(text)
+            parsed["url"] = TW_TPEX_URL
+            result["tpex"] = parsed
         except Exception as e:
             result["tpex"] = {
                 "status": "error",
                 "single_day": "N/A",
                 "date": None,
                 "error": str(e),
+                "url": TW_TPEX_URL,
             }
 
     return result
@@ -545,12 +594,22 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
         usd_twd_spot = usd_twd_item.get("display_close", "N/A") or "N/A"
 
     single_day = "N/A"
-    if foreign_flow_payload.get("twse", {}).get("single_day") not in (None, "", "N/A"):
-        single_day = foreign_flow_payload["twse"]["single_day"]
+    source_used = None
+
+    twse_single = foreign_flow_payload.get("twse", {}).get("single_day")
+    tpex_single = foreign_flow_payload.get("tpex", {}).get("single_day")
+
+    if twse_single not in (None, "", "N/A"):
+        single_day = twse_single
+        source_used = "twse"
+    elif tpex_single not in (None, "", "N/A"):
+        single_day = tpex_single
+        source_used = "tpex"
 
     return {
         "foreign_flow": {
             "single_day": single_day,
+            "source_used": source_used,
             "structural_read": "全球資金仍偏向 AI 與科技股（未見系統性撤出）",
             "source_payload": foreign_flow_payload,
         },
@@ -725,7 +784,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.2",
+        "schema_version": "A.3",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -741,7 +800,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.2",
+        "schema_version": "A.3",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
