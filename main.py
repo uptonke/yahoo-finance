@@ -36,26 +36,29 @@ logger = logging.getLogger(__name__)
 
 MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
     "sp500": {
-        "display_name": "S&P 500",
+        "display_name": "S&P 500 Proxy (SPY)",
         "provider": "twelve_data",
-        "symbol": os.getenv("TD_SP500_SYMBOL", "SPX"),
-        "asset_class": "equity_index",
+        "symbol": os.getenv("TD_SP500_SYMBOL", "SPY"),
+        "asset_class": "equity_index_proxy",
         "report_category": "equities",
         "market": "US",
         "currency": "USD",
         "priority": 10,
         "decimals": 2,
+        "note": "Using SPY ETF as S&P 500 proxy.",
     },
     "taiex": {
-        "display_name": "TAIEX",
+        "display_name": "TAIEX Proxy (0050)",
         "provider": "twelve_data",
-        "symbol": os.getenv("TD_TAIEX_SYMBOL", "TAIEX"),
-        "asset_class": "equity_index",
+        "symbol": os.getenv("TD_TAIEX_SYMBOL", "0050"),
+        "exchange": os.getenv("TD_TAIEX_EXCHANGE", "TWSE"),
+        "asset_class": "equity_index_proxy",
         "report_category": "equities",
         "market": "TW",
         "currency": "TWD",
         "priority": 20,
         "decimals": 2,
+        "note": "Using 0050 ETF as Taiwan equity market proxy.",
     },
     "wti": {
         "display_name": "WTI Crude Oil",
@@ -70,14 +73,15 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
     },
     "usd_twd": {
         "display_name": "USD/TWD",
-        "provider": "twelve_data",
-        "symbol": os.getenv("TD_USDTWD_SYMBOL", "USD/TWD"),
+        "provider": "fred",
+        "series_id": os.getenv("FRED_USDTWD_SERIES", "DEXTAUS"),
         "asset_class": "fx",
         "report_category": "fx",
         "market": "FX",
         "currency": "TWD_PER_USD",
         "priority": 40,
         "decimals": 4,
+        "note": "Using FRED DEXTAUS: Taiwan dollars to one U.S. dollar.",
     },
     "dxy_proxy": {
         "display_name": "US Dollar Broad Index Proxy",
@@ -350,10 +354,20 @@ def fetch_twelve_data_quote(symbol: str) -> Dict[str, Any]:
         raise RuntimeError("Missing TWELVE_DATA_API_KEY")
 
     url = "https://api.twelvedata.com/quote"
+    def fetch_twelve_data_quote(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    if not TWELVE_DATA_API_KEY:
+        raise RuntimeError("Missing TWELVE_DATA_API_KEY")
+
+    url = "https://api.twelvedata.com/quote"
     params = {
-        "symbol": symbol,
+        "symbol": cfg["symbol"],
         "apikey": TWELVE_DATA_API_KEY,
     }
+
+    if cfg.get("exchange"):
+        params["exchange"] = cfg["exchange"]
+
+    return fetch_json(url, params=params)
     return fetch_json(url, params=params)
 
 
@@ -395,7 +409,7 @@ def parse_twelve_data_quote(cfg: Dict[str, Any], payload: Dict[str, Any]) -> Dic
 
 def fetch_market_from_twelve_data(key: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     try:
-        payload = fetch_twelve_data_quote(cfg["symbol"])
+        payload = fetch_twelve_data_quote(cfg)
         if "status" in payload and str(payload.get("status")).lower() == "error":
             return build_error_result(cfg, payload.get("message", "Twelve Data error"))
         return parse_twelve_data_quote(cfg, payload)
