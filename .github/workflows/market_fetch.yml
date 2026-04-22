@@ -19,6 +19,9 @@ jobs:
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
+      TWSE_FOREIGN_FLOW_API_URL: "https://www.twse.com.tw/rwd/zh/fund/T86"
+      TWSE_FOREIGN_FLOW_SELECT_TYPE: "ALLBUT0999"
+
       TD_SP500_SYMBOL: "SPY"
       TD_TAIEX_SYMBOL: "0050"
       TD_TAIEX_EXCHANGE: "TWSE"
