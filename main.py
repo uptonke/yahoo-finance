@@ -537,17 +537,6 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
         ],
     )
 
-    single_day = extract_first_match(
-        flat,
-        [
-            r"外資及陸資淨買股數[^0-9\-]*([\-]?[0-9,]+)",
-            r"外資及陸資買賣超股數[^0-9\-]*([\-]?[0-9,]+)",
-            r"外資及陸資買賣超[^0-9\-]*([\-]?[0-9,]+)",
-            r"外資買賣超[^0-9\-]*([\-]?[0-9,]+)",
-            r"Foreign[^0-9\-]{0,80}Net Buy[^0-9\-]*([\-]?[0-9,]+)",
-        ],
-    )
-
     snippet = None
     snippet_match = re.search(
         r"(外資.{0,250}?(?:淨買|買賣超).{0,120})",
@@ -557,14 +546,36 @@ def parse_tw_official_foreign_flow(text: str) -> Dict[str, Any]:
     if snippet_match:
         snippet = normalize_whitespace(snippet_match.group(1))[:300]
 
+    client_side_rendered = (
+        'id="tables-content"></div>' in text
+        and "tables.init(" in text
+        and 'action:"insti/dailyTrade"' in text
+    )
+
+    single_day = "N/A"
+
+    possible_real_value = extract_first_match(
+        flat,
+        [
+            r"</th><td[^>]*>\s*([\-]?[0-9,]+)\s*</td>",
+            r"<td[^>]*>\s*([\-]?[0-9,]{2,})\s*</td>",
+        ],
+    )
+    if possible_real_value and possible_real_value not in {"0,", ",", "-", "--"}:
+        single_day = possible_real_value
+
+    status = "shell_page" if client_side_rendered else ("ok" if (title or date_value or snippet) else "todo")
+
     return {
-        "status": "ok" if (title or date_value or single_day or snippet) else "todo",
-        "single_day": single_day or "N/A",
+        "status": status,
+        "single_day": single_day,
         "date": date_value,
         "source": "official_page_html",
         "title": title,
         "snippet": snippet,
-        "note": "Parsed from official page HTML with regex; may need API/CSV if page structure changes.",
+        "client_side_rendered": client_side_rendered,
+        "api_action_hint": "insti/dailyTrade" if client_side_rendered else None,
+        "note": "HTML page is a shell page when client_side_rendered=true; fetch underlying API instead of parsing page text.",
     }
 
 
@@ -821,7 +832,7 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
 def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.5",
+        "schema_version": "A.6",
         "source_stack": [
             "Twelve Data",
             "FRED",
@@ -837,7 +848,7 @@ def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dic
 def build_central_bank_output(central_bank_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
-        "schema_version": "A.5",
+        "schema_version": "A.6",
         "source_stack": [
             "Fed official sources",
             "ECB official sources",
