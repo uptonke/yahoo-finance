@@ -1219,7 +1219,6 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
     today = taipei_now().date()
     year = today.year
 
-    # 先限縮到當年度 schedule 區塊
     block_match = re.search(
         rf"{year}\s*Date of MPM Release Schedule(.*?)(?:{year + 1}\s*Date of MPM Release Schedule|$)",
         flat,
@@ -1227,17 +1226,13 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
     )
     block = block_match.group(1) if block_match else flat
 
-    # 典型格式：
-    # April 30 (Thu.), May 1 (Fri.)
-    # 或
-    # Apr. 30 (Thu.), May 1 (Fri.)
     matches = re.findall(
         r"([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)\s*,\s*([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)",
         block,
         re.I,
     )
 
-    for month1_name, _day1, month2_name, day2 in matches:
+    for _month1_name, _day1, month2_name, day2 in matches:
         month_num = MONTH_MAP.get(month2_name.upper())
         if not month_num:
             month_num = MONTH_MAP.get(month2_name.upper()[:3])
@@ -1251,8 +1246,6 @@ def extract_next_boj_meeting(text: str) -> Optional[str]:
         except Exception:
             continue
 
-    # 備援：同月份寫法
-    # April 30 (Thu.),  May 1 (Fri.)
     matches_same_month = re.findall(
         r"([A-Za-z]{3,9})\.?\s+(\d{1,2})\s*\([A-Za-z]{3,}\.?\)\s*,\s*(\d{1,2})\s*\([A-Za-z]{3,}\.?\)",
         block,
@@ -1403,9 +1396,9 @@ def fetch_boj_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
             text = fetch_text(cfg["schedule_url"])
             parsed_meeting = extract_next_boj_meeting(text)
             if parsed_meeting:
-               result["next_meeting"] = parsed_meeting
+                result["next_meeting"] = parsed_meeting
             else:
-            result["notes"].append("next BOJ meeting not parsed from schedule page")
+                result["notes"].append("next BOJ meeting not parsed from schedule page")
             result["sources"]["schedule_url"] = cfg["schedule_url"]
         else:
             result["notes"].append("schedule_url not configured")
