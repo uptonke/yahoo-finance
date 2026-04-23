@@ -13,11 +13,15 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     env:
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
 
       TD_SP500_SYMBOL: "SPY"
       TD_TAIEX_SYMBOL: "0050"
@@ -87,3 +91,63 @@ jobs:
           git add data/market_data.json data/central_bank_data.json
           git diff --staged --quiet || git commit -m "market: $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      - name: Send JSON files via Gmail
+        run: |
+          python - <<'PY'
+          import os
+          import smtplib
+          from datetime import datetime, timezone, timedelta
+          from email.message import EmailMessage
+          from pathlib import Path
+
+          smtp_user = os.environ["SMTP_USERNAME"].strip()
+          smtp_pass = os.environ["SMTP_APP_PASSWORD"].strip()
+          email_to = os.environ["EMAIL_TO"].strip()
+
+          files = [
+              Path("data/market_data.json"),
+              Path("data/central_bank_data.json"),
+          ]
+
+          for f in files:
+              if not f.exists():
+                  raise FileNotFoundError(f"Missing attachment: {f}")
+
+          taipei_now = datetime.now(timezone.utc) + timedelta(hours=8)
+          subject_date = taipei_now.strftime("%Y-%m-%d")
+
+          msg = EmailMessage()
+          msg["Subject"] = f"[market-json][daily][{subject_date}]"
+          msg["From"] = smtp_user
+          msg["To"] = email_to
+          msg.set_content(
+              "\n".join([
+                  f"Daily market snapshot generated at {taipei_now.strftime('%Y-%m-%d %H:%M:%S')} Asia/Taipei",
+                  "",
+                  "Attachments:",
+                  "- market_data.json",
+                  "- central_bank_data.json",
+                  "",
+                  "GitHub Pages links:",
+                  "https://uptonke.github.io/yahoo-finance/data/market_data.json",
+                  "https://uptonke.github.io/yahoo-finance/data/central_bank_data.json",
+              ])
+          )
+
+          for f in files:
+              with open(f, "rb") as fp:
+                  data = fp.read()
+              msg.add_attachment(
+                  data,
+                  maintype="application",
+                  subtype="json",
+                  filename=f.name,
+              )
+
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+              smtp.login(smtp_user, smtp_pass)
+              smtp.send_message(msg)
+
+          print("Email sent successfully.")
+          PY
