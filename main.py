@@ -70,9 +70,9 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "note": "Using 0050 ETF as Taiwan equity market proxy. Optional because Twelve Data plan coverage may vary.",
     },
     "wti": {
-        "display_name": "WTI Crude Oil",
-        "provider": "twelve_data",
-        "symbol": os.getenv("TD_WTI_SYMBOL", "WTI"),
+        "display_name": "WTI Crude Oil Spot",
+        "provider": "fred",
+        "series_id": os.getenv("FRED_WTI_SERIES", "DCOILWTICO"),
         "asset_class": "commodity",
         "report_category": "commodities",
         "market": "GLOBAL",
@@ -80,6 +80,8 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "priority": 30,
         "decimals": 2,
         "required": True,
+        "max_staleness_days": 10,
+        "note": "Using FRED DCOILWTICO as WTI crude oil spot proxy.",
     },
     "usd_twd": {
         "display_name": "USD/TWD",
