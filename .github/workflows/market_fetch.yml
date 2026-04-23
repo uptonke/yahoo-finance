@@ -16,6 +16,9 @@ jobs:
     timeout-minutes: 20
 
     env:
+
+      FRED_WTI_SERIES: "DCOILWTICO"
+
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
