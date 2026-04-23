@@ -92,6 +92,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "priority": 40,
         "decimals": 4,
         "required": True,
+        "max_staleness_days": 10,
         "note": "Using FRED DEXTAUS: Taiwan dollars to one U.S. dollar.",
     },
     "dxy_proxy": {
@@ -105,6 +106,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "priority": 50,
         "decimals": 2,
         "required": True,
+        "max_staleness_days": 10,
         "note": "FRED broad dollar index proxy; not identical to ICE DXY.",
     },
     "us10y": {
@@ -119,6 +121,7 @@ MARKET_CONFIG: Dict[str, Dict[str, Any]] = {
         "decimals": 3,
         "unit": "%",
         "required": True,
+        "max_staleness_days": 7,
     },
 }
 
@@ -1505,9 +1508,9 @@ def days_old_from_taipei(date_str: Optional[str]) -> Optional[int]:
 
 
 def max_staleness_days_for_market(item: Dict[str, Any]) -> int:
-    market = str(item.get("market", "")).upper()
-    if market in {"US", "GLOBAL", "FX", "TW"}:
-        return DEFAULT_MAX_STALENESS_DAYS
+    custom = item.get("max_staleness_days")
+    if isinstance(custom, int) and custom > 0:
+        return custom
     return DEFAULT_MAX_STALENESS_DAYS
 
 
@@ -1619,7 +1622,6 @@ def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any
         "error_count": len(market_data) - len(ok_items),
         "required_total": len(required_items),
         "required_ok_count": len(required_ok_items),
-        "required_error_count": len(required_items) - len(required_ok_items),
         "optional_total": len(optional_items),
         "optional_error_count": len(optional_error_items),
         "category_counts": by_category,
