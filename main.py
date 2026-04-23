@@ -383,7 +383,7 @@ def format_change(change: Optional[float], change_pct: Optional[float], cfg: Dic
 
 
 def build_error_result(cfg: Dict[str, Any], message: str) -> Dict[str, Any]:
-    return {
+    result = {
         "status": "error",
         "display_name": cfg["display_name"],
         "provider": cfg["provider"],
@@ -395,6 +395,11 @@ def build_error_result(cfg: Dict[str, Any], message: str) -> Dict[str, Any]:
         "required": cfg.get("required", True),
         "error": message,
     }
+
+    if "max_staleness_days" in cfg:
+        result["max_staleness_days"] = cfg["max_staleness_days"]
+
+    return result
 
 
 def build_ok_result(
@@ -425,6 +430,7 @@ def build_ok_result(
         "currency": cfg["currency"],
         "priority": cfg["priority"],
         "required": cfg.get("required", True),
+        "max_staleness_days": cfg.get("max_staleness_days"),
         "date": date_str,
         "close": safe_round(close, decimals),
         "prev_close": safe_round(prev_close, decimals),
@@ -942,7 +948,10 @@ def fetch_tw_foreign_flow() -> Dict[str, Any]:
     }
 
 
-def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_payload: Dict[str, Any]) -> Dict[str, Any]:
+def build_taiwan_view(
+    market_data: Dict[str, Dict[str, Any]],
+    foreign_flow_payload: Dict[str, Any],
+) -> Dict[str, Any]:
     usd_twd_item = market_data.get("usd_twd", {})
     usd_twd_spot = "N/A"
     if usd_twd_item.get("status") == "ok":
@@ -1013,7 +1022,6 @@ def build_taiwan_view(market_data: Dict[str, Dict[str, Any]], foreign_flow_paylo
 # =========================================================
 # 7. 央行動態（升級版：Fed/ECB 結構化；BOJ/PBOC 官方混合）
 # =========================================================
-
 
 MONTH_MAP = {
     "JAN": 1,
@@ -1437,6 +1445,7 @@ def fetch_pboc_hybrid_block(cfg: Dict[str, Any]) -> Dict[str, Any]:
             text = fetch_text(cfg["schedule_url"])
             latest_meeting = extract_latest_pboc_meeting(text)
             if latest_meeting:
+                result["current_rate_date"] = latest_meeting
                 result["notes"].append(f"latest MPC meeting observed: {latest_meeting}")
                 result["detail"] = {"latest_mpc_meeting_date": latest_meeting}
             result["sources"]["schedule_url"] = cfg["schedule_url"]
@@ -1562,7 +1571,10 @@ def collect_stale_foreign_flow_items(foreign_flow_payload: Dict[str, Any]) -> li
     return stale_items
 
 
-def build_quality_checks(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
+def build_quality_checks(
+    market_data: Dict[str, Dict[str, Any]],
+    taiwan_view: Dict[str, Any],
+) -> Dict[str, Any]:
     foreign_flow_payload = taiwan_view.get("foreign_flow", {}).get("source_payload", {})
     stale_market_items = collect_stale_market_items(market_data)
     stale_foreign_flow_items = collect_stale_foreign_flow_items(foreign_flow_payload)
@@ -1573,7 +1585,9 @@ def build_quality_checks(market_data: Dict[str, Dict[str, Any]], taiwan_view: Di
         "stale_guard_passed": len(stale_market_items) == 0 and len(stale_foreign_flow_items) == 0,
         "stale_market_items": stale_market_items,
         "stale_foreign_flow_items": stale_foreign_flow_items,
-        "foreign_flow_single_day_raw_type": type(single_day_raw).__name__ if single_day_raw is not None else "NoneType",
+        "foreign_flow_single_day_raw_type": (
+            type(single_day_raw).__name__ if single_day_raw is not None else "NoneType"
+        ),
     }
 
 
@@ -1622,6 +1636,7 @@ def build_summary_stats(market_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any
         "error_count": len(market_data) - len(ok_items),
         "required_total": len(required_items),
         "required_ok_count": len(required_ok_items),
+        "required_error_count": len(required_items) - len(required_ok_items),
         "optional_total": len(optional_items),
         "optional_error_count": len(optional_error_items),
         "category_counts": by_category,
@@ -1676,7 +1691,10 @@ def fetch_market_data() -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def build_market_output(market_data: Dict[str, Dict[str, Any]], taiwan_view: Dict[str, Any]) -> Dict[str, Any]:
+def build_market_output(
+    market_data: Dict[str, Dict[str, Any]],
+    taiwan_view: Dict[str, Any],
+) -> Dict[str, Any]:
     return {
         "generated_at": now_iso(),
         "schema_version": SCHEMA_VERSION,
