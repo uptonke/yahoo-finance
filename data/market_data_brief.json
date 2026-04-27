@@ -1,0 +1,245 @@
+{
+  "generated_at": "2026-04-27T01:54:36.987747+00:00",
+  "schema_version": "A.8",
+  "source_stack": [
+    "Twelve Data",
+    "FRED",
+    "TWSE/TPEX official APIs"
+  ],
+  "summary_stats": {
+    "total_instruments": 6,
+    "ok_count": 5,
+    "error_count": 1,
+    "required_total": 5,
+    "required_ok_count": 5,
+    "required_error_count": 0,
+    "optional_total": 1,
+    "optional_error_count": 1,
+    "category_counts": {
+      "equities": 1,
+      "commodities": 1,
+      "fx": 2,
+      "rates": 1
+    }
+  },
+  "report_ready_view": {
+    "ordered_keys": [
+      "sp500",
+      "wti",
+      "usd_twd",
+      "dxy_proxy",
+      "us10y"
+    ],
+    "by_category": {
+      "equities": [
+        {
+          "display_name": "S&P 500 Proxy (SPY)",
+          "display_close": "713.94",
+          "display_change": "+5.49 (+0.77%)",
+          "as_of_label": "latest close (2026-04-24)",
+          "direction": "up",
+          "required": true
+        }
+      ],
+      "commodities": [
+        {
+          "display_name": "WTI Crude Oil Spot",
+          "display_close": "91.06",
+          "display_change": "+5.15 (+5.99%)",
+          "as_of_label": "latest close (2026-04-20)",
+          "direction": "up",
+          "required": true
+        }
+      ],
+      "fx": [
+        {
+          "display_name": "USD/TWD",
+          "display_close": "31.5900",
+          "display_change": "+0.0400 (+0.13%)",
+          "as_of_label": "latest close (2026-04-17)",
+          "direction": "up",
+          "required": true
+        },
+        {
+          "display_name": "US Dollar Broad Index Proxy",
+          "display_close": "118.08",
+          "display_change": "-0.28 (-0.24%)",
+          "as_of_label": "latest close (2026-04-17)",
+          "direction": "down",
+          "required": true
+        }
+      ],
+      "rates": [
+        {
+          "display_name": "US 10Y Treasury Yield",
+          "display_close": "4.340%",
+          "display_change": "+0.040pp (+0.93%)",
+          "as_of_label": "latest close (2026-04-23)",
+          "direction": "up",
+          "required": true
+        }
+      ]
+    }
+  },
+  "taiwan_view": {
+    "foreign_flow": {
+      "single_day": "83,206,444",
+      "single_day_raw": 83206444,
+      "date": "2026-04-24",
+      "source_used": "twse+tpex",
+      "market_scope": "listed+otc",
+      "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
+    },
+    "semiconductor_supply_chain": {
+      "core_logic": [
+        "AI需求強（持續）",
+        "能源與原物料成本上升（壓縮部分毛利）"
+      ],
+      "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大"
+    },
+    "fx": {
+      "usd_twd_spot": "31.5900",
+      "assessment": [
+        "若油價上行 → USD 轉強",
+        "若風險偏好回升 → TWD 偏強"
+      ],
+      "base_case": "區間震盪機率 60%"
+    }
+  },
+  "market_data": {
+    "sp500": {
+      "status": "ok",
+      "display_name": "S&P 500 Proxy (SPY)",
+      "provider": "twelve_data",
+      "asset_class": "equity_index_proxy",
+      "report_category": "equities",
+      "market": "US",
+      "currency": "USD",
+      "priority": 10,
+      "required": true,
+      "max_staleness_days": null,
+      "date": "2026-04-24",
+      "close": 713.94,
+      "prev_close": 708.45,
+      "change": 5.49,
+      "change_pct": 0.77,
+      "direction": "up",
+      "market_session_label": "latest",
+      "display_close": "713.94",
+      "display_change": "+5.49 (+0.77%)",
+      "as_of_label": "latest close (2026-04-24)",
+      "note": "Using SPY ETF as S&P 500 proxy."
+    },
+    "taiex": {
+      "status": "error",
+      "display_name": "TAIEX Proxy (0050)",
+      "provider": "twelve_data",
+      "asset_class": "equity_index_proxy",
+      "report_category": "equities",
+      "market": "TW",
+      "currency": "TWD",
+      "priority": 20,
+      "required": false,
+      "error": "This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    "wti": {
+      "status": "ok",
+      "display_name": "WTI Crude Oil Spot",
+      "provider": "fred",
+      "asset_class": "commodity",
+      "report_category": "commodities",
+      "market": "GLOBAL",
+      "currency": "USD",
+      "priority": 30,
+      "required": true,
+      "max_staleness_days": 10,
+      "date": "2026-04-20",
+      "close": 91.06,
+      "prev_close": 85.91,
+      "change": 5.15,
+      "change_pct": 5.99,
+      "direction": "up",
+      "market_session_label": "latest",
+      "display_close": "91.06",
+      "display_change": "+5.15 (+5.99%)",
+      "as_of_label": "latest close (2026-04-20)",
+      "note": "Using FRED DCOILWTICO as WTI crude oil spot proxy."
+    },
+    "usd_twd": {
+      "status": "ok",
+      "display_name": "USD/TWD",
+      "provider": "fred",
+      "asset_class": "fx",
+      "report_category": "fx",
+      "market": "FX",
+      "currency": "TWD_PER_USD",
+      "priority": 40,
+      "required": true,
+      "max_staleness_days": 10,
+      "date": "2026-04-17",
+      "close": 31.59,
+      "prev_close": 31.55,
+      "change": 0.04,
+      "change_pct": 0.13,
+      "direction": "up",
+      "market_session_label": "latest",
+      "display_close": "31.5900",
+      "display_change": "+0.0400 (+0.13%)",
+      "as_of_label": "latest close (2026-04-17)",
+      "note": "Using FRED DEXTAUS: Taiwan dollars to one U.S. dollar."
+    },
+    "dxy_proxy": {
+      "status": "ok",
+      "display_name": "US Dollar Broad Index Proxy",
+      "provider": "fred",
+      "asset_class": "fx_index",
+      "report_category": "fx",
+      "market": "US",
+      "currency": "INDEX_POINTS",
+      "priority": 50,
+      "required": true,
+      "max_staleness_days": 10,
+      "date": "2026-04-17",
+      "close": 118.08,
+      "prev_close": 118.36,
+      "change": -0.28,
+      "change_pct": -0.24,
+      "direction": "down",
+      "market_session_label": "latest",
+      "display_close": "118.08",
+      "display_change": "-0.28 (-0.24%)",
+      "as_of_label": "latest close (2026-04-17)",
+      "note": "FRED broad dollar index proxy; not identical to ICE DXY."
+    },
+    "us10y": {
+      "status": "ok",
+      "display_name": "US 10Y Treasury Yield",
+      "provider": "fred",
+      "asset_class": "government_bond_yield",
+      "report_category": "rates",
+      "market": "US",
+      "currency": "PERCENT",
+      "priority": 60,
+      "required": true,
+      "max_staleness_days": 7,
+      "date": "2026-04-23",
+      "close": 4.34,
+      "prev_close": 4.3,
+      "change": 0.04,
+      "change_pct": 0.93,
+      "direction": "up",
+      "market_session_label": "latest",
+      "display_close": "4.340%",
+      "display_change": "+0.040pp (+0.93%)",
+      "as_of_label": "latest close (2026-04-23)",
+      "unit": "%"
+    }
+  },
+  "quality_checks": {
+    "smoke_test_passed": true,
+    "stale_guard_passed": true,
+    "stale_market_items": [],
+    "stale_foreign_flow_items": [],
+    "foreign_flow_single_day_raw_type": "int"
+  }
+}
