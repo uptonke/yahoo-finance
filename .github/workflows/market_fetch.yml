@@ -2,6 +2,9 @@ name: Daily Market Data Fetch
 
 on:
   workflow_dispatch:
+  schedule:
+    # 22:30 UTC = 06:30 Asia/Taipei
+    - cron: "30 22 * * *"
 
 permissions:
   contents: write
@@ -16,7 +19,6 @@ jobs:
     timeout-minutes: 20
 
     env:
-
       FRED_WTI_SERIES: "DCOILWTICO"
 
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
@@ -85,13 +87,48 @@ jobs:
       - name: Verify outputs exist
         run: |
           test -f data/market_data.json
+          test -f data/market_data_brief.json
           test -f data/central_bank_data.json
+
+      - name: Validate JSON outputs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          files = [
+              Path("data/market_data.json"),
+              Path("data/market_data_brief.json"),
+              Path("data/central_bank_data.json"),
+          ]
+
+          for f in files:
+              if not f.exists():
+                  raise FileNotFoundError(f"Missing file: {f}")
+
+              size = f.stat().st_size
+              if size == 0:
+                  raise ValueError(f"Empty JSON file: {f}")
+
+              with f.open("r", encoding="utf-8") as fp:
+                  json.load(fp)
+
+              print(f"Valid JSON: {f} ({size:,} bytes)")
+
+          brief_size = Path("data/market_data_brief.json").stat().st_size
+          if brief_size > 500_000:
+              raise ValueError(
+                  f"market_data_brief.json too large for scheduled action input: {brief_size:,} bytes"
+              )
+          PY
 
       - name: Commit and push data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/market_data.json data/central_bank_data.json
+
+          git add data/market_data.json data/market_data_brief.json data/central_bank_data.json
+
           git diff --staged --quiet || git commit -m "market: $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
 
@@ -109,13 +146,22 @@ jobs:
           email_to = os.environ["EMAIL_TO"].strip()
 
           files = [
-              Path("data/market_data.json"),
+              Path("data/market_data_brief.json"),
               Path("data/central_bank_data.json"),
           ]
 
           for f in files:
               if not f.exists():
                   raise FileNotFoundError(f"Missing attachment: {f}")
+
+              if f.stat().st_size == 0:
+                  raise ValueError(f"Empty attachment: {f}")
+
+          brief_size = Path("data/market_data_brief.json").stat().st_size
+          if brief_size > 500_000:
+              raise ValueError(
+                  f"market_data_brief.json too large for scheduled action input: {brief_size:,} bytes"
+              )
 
           taipei_now = datetime.now(timezone.utc) + timedelta(hours=8)
           subject_date = taipei_now.strftime("%Y-%m-%d")
@@ -129,18 +175,26 @@ jobs:
                   f"Daily market snapshot generated at {taipei_now.strftime('%Y-%m-%d %H:%M:%S')} Asia/Taipei",
                   "",
                   "Attachments:",
-                  "- market_data.json",
+                  "- market_data_brief.json",
                   "- central_bank_data.json",
                   "",
                   "GitHub Pages links:",
-                  "https://uptonke.github.io/yahoo-finance/data/market_data.json",
+                  "https://uptonke.github.io/yahoo-finance/data/market_data_brief.json",
                   "https://uptonke.github.io/yahoo-finance/data/central_bank_data.json",
+                  "",
+                  "Debug / audit file:",
+                  "https://uptonke.github.io/yahoo-finance/data/market_data.json",
+                  "",
+                  "Note:",
+                  "market_data_brief.json is the compact Scheduled Actions input.",
+                  "market_data.json is the full debug/audit file and is not attached.",
               ])
           )
 
           for f in files:
               with open(f, "rb") as fp:
                   data = fp.read()
+
               msg.add_attachment(
                   data,
                   maintype="application",
