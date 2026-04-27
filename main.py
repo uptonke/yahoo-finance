@@ -20,7 +20,11 @@ SCHEMA_VERSION = "A.8"
 
 OUTPUT_DIR = Path("data")
 MARKET_OUTPUT_FILE = OUTPUT_DIR / "market_data.json"
+MARKET_BRIEF_OUTPUT_FILE = OUTPUT_DIR / "market_data_brief.json"
 CENTRAL_BANK_OUTPUT_FILE = OUTPUT_DIR / "central_bank_data.json"
+
+# Scheduled Actions / Gmail attachment input should stay compact.
+MAX_SCHEDULED_ACTION_JSON_BYTES = 500_000
 
 TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", "").strip()
 FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
@@ -300,6 +304,106 @@ def atomic_write_json(path: Path, payload: Dict[str, Any]) -> None:
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
+
+
+def validate_json_file(path: Path) -> int:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing JSON file: {path}")
+
+    size = path.stat().st_size
+    if size == 0:
+        raise ValueError(f"Empty JSON file: {path}")
+
+    with open(path, "r", encoding="utf-8") as f:
+        json.load(f)
+
+    logger.info("JSON valid: %s (%s bytes)", path, f"{size:,}")
+    return size
+
+
+def validate_reasonable_size(path: Path, max_bytes: int = MAX_SCHEDULED_ACTION_JSON_BYTES) -> int:
+    size = validate_json_file(path)
+
+    if size > max_bytes:
+        raise ValueError(
+            f"{path} too large for scheduled action input: {size:,} bytes > {max_bytes:,} bytes"
+        )
+
+    return size
+
+
+def strip_heavy_fields(obj: Any) -> Any:
+    """
+    Build compact scheduled-action JSON.
+
+    Removes audit/debug-heavy payloads that make Gmail attachment reading unstable:
+    - raw_payload
+    - source_payload
+    - request_params / request_payload
+    - rows / fields / observations / full history-like arrays
+    """
+
+    heavy_keys = {
+        "raw_payload",
+        "source_payload",
+        "request_params",
+        "request_payload",
+        "observations",
+        "rows",
+        "fields",
+        "history",
+        "time_series",
+        "raw",
+        "html",
+        "text",
+        "body",
+    }
+
+    if isinstance(obj, dict):
+        return {
+            k: strip_heavy_fields(v)
+            for k, v in obj.items()
+            if k not in heavy_keys
+        }
+
+    if isinstance(obj, list):
+        if len(obj) > 20:
+            return [strip_heavy_fields(x) for x in obj[-5:]]
+        return [strip_heavy_fields(x) for x in obj]
+
+    return obj
+
+
+def build_market_brief_output(market_output: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compact version for Gmail attachments / Scheduled Actions.
+
+    Keep:
+    - generated_at
+    - schema_version
+    - source_stack
+    - summary_stats
+    - report_ready_view
+    - taiwan_view summary
+    - market_data core fields
+    - quality_checks
+
+    Drop:
+    - raw API payloads
+    - TWSE/TPEX row-level data
+    - FRED full observations
+    """
+
+    return {
+        "generated_at": market_output.get("generated_at"),
+        "schema_version": market_output.get("schema_version"),
+        "source_stack": market_output.get("source_stack"),
+        "summary_stats": market_output.get("summary_stats"),
+        "report_ready_view": strip_heavy_fields(market_output.get("report_ready_view")),
+        "taiwan_view": strip_heavy_fields(market_output.get("taiwan_view")),
+        "market_data": strip_heavy_fields(market_output.get("market_data", {})),
+        "quality_checks": market_output.get("quality_checks"),
+    }
 
 
 def normalize_whitespace(text: str) -> str:
@@ -1022,7 +1126,7 @@ def build_taiwan_view(
 
 
 # =========================================================
-# 7. 央行動態（升級版：Fed/ECB 結構化；BOJ/PBOC 官方混合）
+# 7. 央行動態
 # =========================================================
 
 MONTH_MAP = {
@@ -1787,10 +1891,18 @@ def main() -> None:
     market_output["quality_checks"]["smoke_test_passed"] = True
     central_bank_output["quality_checks"]["smoke_test_passed"] = True
 
+    market_brief_output = build_market_brief_output(market_output)
+
     atomic_write_json(MARKET_OUTPUT_FILE, market_output)
+    atomic_write_json(MARKET_BRIEF_OUTPUT_FILE, market_brief_output)
     atomic_write_json(CENTRAL_BANK_OUTPUT_FILE, central_bank_output)
 
+    validate_json_file(MARKET_OUTPUT_FILE)
+    validate_reasonable_size(MARKET_BRIEF_OUTPUT_FILE)
+    validate_json_file(CENTRAL_BANK_OUTPUT_FILE)
+
     logger.info("Done. Wrote %s", MARKET_OUTPUT_FILE)
+    logger.info("Done. Wrote %s", MARKET_BRIEF_OUTPUT_FILE)
     logger.info("Done. Wrote %s", CENTRAL_BANK_OUTPUT_FILE)
 
 
