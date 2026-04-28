@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-28T22:53:28.003275+00:00",
+  "generated_at": "2026-04-28T23:27:35.457249+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,8 +34,8 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "711.68",
-          "display_change": "-3.49 (-0.49%)",
+          "display_close": "711.69",
+          "display_change": "-3.48 (-0.49%)",
           "as_of_label": "latest close (2026-04-28)",
           "direction": "down",
           "required": true
@@ -119,14 +119,14 @@
       "required": true,
       "max_staleness_days": null,
       "date": "2026-04-28",
-      "close": 711.68,
+      "close": 711.69,
       "prev_close": 715.17,
-      "change": -3.49,
+      "change": -3.48,
       "change_pct": -0.49,
       "direction": "down",
       "market_session_label": "latest",
-      "display_close": "711.68",
-      "display_change": "-3.49 (-0.49%)",
+      "display_close": "711.69",
+      "display_change": "-3.48 (-0.49%)",
       "as_of_label": "latest close (2026-04-28)",
       "note": "Using SPY ETF as S&P 500 proxy."
     },
