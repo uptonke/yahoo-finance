@@ -2,10 +2,7 @@ name: Daily Market Data Fetch
 
 on:
   workflow_dispatch:
-  schedule:
-    # 22:30 UTC = 06:30 Asia/Taipei
-    - cron: "30 22 * * *"
-
+  
 permissions:
   contents: write
 
