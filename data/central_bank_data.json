@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-01T22:53:35.659431+00:00",
+  "generated_at": "2026-05-02T22:53:28.324747+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Fed official structured sources",
@@ -12,7 +12,7 @@
       "status": "ok",
       "display_name": "Fed",
       "current_rate": "3.50% - 3.75%",
-      "current_rate_date": "2026-05-01",
+      "current_rate_date": "2026-05-02",
       "next_meeting": "2026-06-17",
       "market_pricing_path": "N/A",
       "sources": {
@@ -30,7 +30,7 @@
       "status": "ok",
       "display_name": "ECB",
       "current_rate": "MRR 2.15% / DFR 2.00% / MLFR 2.40%",
-      "current_rate_date": "2026-05-01",
+      "current_rate_date": "2026-05-02",
       "next_meeting": "2026-06-11",
       "market_pricing_path": "N/A",
       "sources": {
