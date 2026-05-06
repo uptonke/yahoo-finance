@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-05T22:53:30.468987+00:00",
+  "generated_at": "2026-05-06T22:53:34.980389+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,9 +34,9 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "723.77",
-          "display_change": "+5.76 (+0.80%)",
-          "as_of_label": "latest close (2026-05-05)",
+          "display_close": "733.83",
+          "display_change": "+10.06 (+1.39%)",
+          "as_of_label": "latest close (2026-05-06)",
           "direction": "up",
           "required": true
         }
@@ -44,9 +44,9 @@
       "commodities": [
         {
           "display_name": "WTI Crude Oil Spot",
-          "display_close": "99.89",
-          "display_change": "+1.47 (+1.49%)",
-          "as_of_label": "latest close (2026-04-27)",
+          "display_close": "109.76",
+          "display_change": "+4.38 (+4.16%)",
+          "as_of_label": "latest close (2026-05-04)",
           "direction": "up",
           "required": true
         }
@@ -72,10 +72,10 @@
       "rates": [
         {
           "display_name": "US 10Y Treasury Yield",
-          "display_close": "4.450%",
-          "display_change": "+0.060pp (+1.37%)",
-          "as_of_label": "latest close (2026-05-04)",
-          "direction": "up",
+          "display_close": "4.430%",
+          "display_change": "-0.020pp (-0.45%)",
+          "as_of_label": "latest close (2026-05-05)",
+          "direction": "down",
           "required": true
         }
       ]
@@ -83,9 +83,9 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "297,321,037",
-      "single_day_raw": 297321037,
-      "date": "2026-05-05",
+      "single_day": "480,613,659",
+      "single_day_raw": 480613659,
+      "date": "2026-05-06",
       "source_used": "twse+tpex",
       "market_scope": "listed+otc",
       "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
@@ -118,16 +118,16 @@
       "priority": 10,
       "required": true,
       "max_staleness_days": null,
-      "date": "2026-05-05",
-      "close": 723.77,
-      "prev_close": 718.01,
-      "change": 5.76,
-      "change_pct": 0.8,
+      "date": "2026-05-06",
+      "close": 733.83,
+      "prev_close": 723.77,
+      "change": 10.06,
+      "change_pct": 1.39,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "723.77",
-      "display_change": "+5.76 (+0.80%)",
-      "as_of_label": "latest close (2026-05-05)",
+      "display_close": "733.83",
+      "display_change": "+10.06 (+1.39%)",
+      "as_of_label": "latest close (2026-05-06)",
       "note": "Using SPY ETF as S&P 500 proxy."
     },
     "taiex": {
@@ -153,16 +153,16 @@
       "priority": 30,
       "required": true,
       "max_staleness_days": 10,
-      "date": "2026-04-27",
-      "close": 99.89,
-      "prev_close": 98.42,
-      "change": 1.47,
-      "change_pct": 1.49,
+      "date": "2026-05-04",
+      "close": 109.76,
+      "prev_close": 105.38,
+      "change": 4.38,
+      "change_pct": 4.16,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "99.89",
-      "display_change": "+1.47 (+1.49%)",
-      "as_of_label": "latest close (2026-04-27)",
+      "display_close": "109.76",
+      "display_change": "+4.38 (+4.16%)",
+      "as_of_label": "latest close (2026-05-04)",
       "note": "Using FRED DCOILWTICO as WTI crude oil spot proxy."
     },
     "usd_twd": {
@@ -222,16 +222,16 @@
       "priority": 60,
       "required": true,
       "max_staleness_days": 7,
-      "date": "2026-05-04",
-      "close": 4.45,
-      "prev_close": 4.39,
-      "change": 0.06,
-      "change_pct": 1.37,
-      "direction": "up",
+      "date": "2026-05-05",
+      "close": 4.43,
+      "prev_close": 4.45,
+      "change": -0.02,
+      "change_pct": -0.45,
+      "direction": "down",
       "market_session_label": "latest",
-      "display_close": "4.450%",
-      "display_change": "+0.060pp (+1.37%)",
-      "as_of_label": "latest close (2026-05-04)",
+      "display_close": "4.430%",
+      "display_change": "-0.020pp (-0.45%)",
+      "as_of_label": "latest close (2026-05-05)",
       "unit": "%"
     }
   },
