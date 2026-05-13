@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T22:53:27.396762+00:00",
+  "generated_at": "2026-05-13T22:53:34.109237+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,19 +34,19 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "738.20",
-          "display_change": "-1.10 (-0.15%)",
-          "as_of_label": "latest close (2026-05-12)",
-          "direction": "down",
+          "display_close": "742.31",
+          "display_change": "+4.13 (+0.56%)",
+          "as_of_label": "latest close (2026-05-13)",
+          "direction": "up",
           "required": true
         }
       ],
       "commodities": [
         {
           "display_name": "WTI Crude Oil Spot",
-          "display_close": "109.76",
-          "display_change": "+4.38 (+4.16%)",
-          "as_of_label": "latest close (2026-05-04)",
+          "display_close": "101.56",
+          "display_change": "+2.69 (+2.72%)",
+          "as_of_label": "latest close (2026-05-11)",
           "direction": "up",
           "required": true
         }
@@ -72,9 +72,9 @@
       "rates": [
         {
           "display_name": "US 10Y Treasury Yield",
-          "display_close": "4.420%",
-          "display_change": "+0.040pp (+0.91%)",
-          "as_of_label": "latest close (2026-05-11)",
+          "display_close": "4.460%",
+          "display_change": "+0.040pp (+0.90%)",
+          "as_of_label": "latest close (2026-05-12)",
           "direction": "up",
           "required": true
         }
@@ -83,12 +83,12 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "-261,824,606",
-      "single_day_raw": -261824606,
-      "date": "2026-05-12",
-      "source_used": "twse+tpex",
-      "market_scope": "listed+otc",
-      "structural_read": "外資當日偏空，上市櫃合計呈現淨賣超"
+      "single_day": "N/A",
+      "single_day_raw": null,
+      "date": "2026-05-14",
+      "source_used": null,
+      "market_scope": null,
+      "structural_read": "資料不足，無法判定外資當日方向"
     },
     "semiconductor_supply_chain": {
       "core_logic": [
@@ -118,16 +118,16 @@
       "priority": 10,
       "required": true,
       "max_staleness_days": null,
-      "date": "2026-05-12",
-      "close": 738.2,
-      "prev_close": 739.3,
-      "change": -1.1,
-      "change_pct": -0.15,
-      "direction": "down",
+      "date": "2026-05-13",
+      "close": 742.31,
+      "prev_close": 738.18,
+      "change": 4.13,
+      "change_pct": 0.56,
+      "direction": "up",
       "market_session_label": "latest",
-      "display_close": "738.20",
-      "display_change": "-1.10 (-0.15%)",
-      "as_of_label": "latest close (2026-05-12)",
+      "display_close": "742.31",
+      "display_change": "+4.13 (+0.56%)",
+      "as_of_label": "latest close (2026-05-13)",
       "note": "Using SPY ETF as S&P 500 proxy."
     },
     "taiex": {
@@ -153,16 +153,16 @@
       "priority": 30,
       "required": true,
       "max_staleness_days": 10,
-      "date": "2026-05-04",
-      "close": 109.76,
-      "prev_close": 105.38,
-      "change": 4.38,
-      "change_pct": 4.16,
+      "date": "2026-05-11",
+      "close": 101.56,
+      "prev_close": 98.87,
+      "change": 2.69,
+      "change_pct": 2.72,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "109.76",
-      "display_change": "+4.38 (+4.16%)",
-      "as_of_label": "latest close (2026-05-04)",
+      "display_close": "101.56",
+      "display_change": "+2.69 (+2.72%)",
+      "as_of_label": "latest close (2026-05-11)",
       "note": "Using FRED DCOILWTICO as WTI crude oil spot proxy."
     },
     "usd_twd": {
@@ -222,16 +222,16 @@
       "priority": 60,
       "required": true,
       "max_staleness_days": 7,
-      "date": "2026-05-11",
-      "close": 4.42,
-      "prev_close": 4.38,
+      "date": "2026-05-12",
+      "close": 4.46,
+      "prev_close": 4.42,
       "change": 0.04,
-      "change_pct": 0.91,
+      "change_pct": 0.9,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "4.420%",
-      "display_change": "+0.040pp (+0.91%)",
-      "as_of_label": "latest close (2026-05-11)",
+      "display_close": "4.460%",
+      "display_change": "+0.040pp (+0.90%)",
+      "as_of_label": "latest close (2026-05-12)",
       "unit": "%"
     }
   },
@@ -240,6 +240,6 @@
     "stale_guard_passed": true,
     "stale_market_items": [],
     "stale_foreign_flow_items": [],
-    "foreign_flow_single_day_raw_type": "int"
+    "foreign_flow_single_day_raw_type": "NoneType"
   }
 }
