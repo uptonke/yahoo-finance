@@ -1,14 +1,17 @@
-# Fed Labor Pivot Data Fetch Setup
+# Fed Labor Pivot Data Fetch Setup v2
 
-This patch adds an independent Federal Reserve labor-pivot data pipeline to the existing `uptonke/yahoo-finance` repository.
+This patch adds or updates an independent Federal Reserve labor-pivot data pipeline inside the existing `uptonke/yahoo-finance` repository.
 
-## Files added
+It does not modify `main.py`.
+
+## Files added / updated
 
 ```text
 fed_labor_pivot.py
 requirements-fed-labor.txt
 .github/workflows/fed-labor-pivot.yml
 docs/FED_LABOR_PIVOT_SETUP.md
+docs/FED_LABOR_PIVOT_PROMPT_V2.md
 ```
 
 The script writes:
@@ -21,13 +24,56 @@ data/fed_labor_pivot_monitor_history.jsonl
 
 ## Required GitHub Secret
 
-Add this repository secret:
+Add or keep this repository secret:
 
 ```text
 FRED_API_KEY
 ```
 
 The script will not crash if the key is missing, but the output will be marked `DATA_INVALID`.
+
+## Series fetched
+
+Core labor indicators:
+
+```text
+PAYEMS
+UNRATE
+SAHMREALTIME
+ICSA
+CC4WSA
+CCSA
+JTSJOL
+JTSQUR
+JTSLDL
+DGS2
+```
+
+Secondary labor-quality confirmation indicators:
+
+```text
+U6RATE
+TEMPHELPS
+AWHAETP
+LNS13023621
+```
+
+Inflation-gate indicators:
+
+```text
+PCEPI
+PCEPILFE
+CPIAUCSL
+CPILFESL
+```
+
+## Logic notes
+
+- `numeric_regime_preliminary` is driven by core labor indicators only.
+- U-6, temporary help, average weekly hours, and job losers are secondary confirmation indicators.
+- Secondary indicators may raise confidence inside a YELLOW / ORANGE / RED assessment, but they must not independently trigger RED or PIVOT CONFIRMED.
+- PCE / CPI indicators are an inflation constraint on Fed pivot space, not a separate inflation monitor.
+- PIVOT CONFIRMED still requires official Fed communication review by the ChatGPT scheduled report.
 
 ## cron-job.org trigger
 
@@ -62,12 +108,13 @@ Body:
 }
 ```
 
-Suggested timing:
+Recommended timing:
 
 ```text
-Every Saturday 09:40 Asia/Taipei
-Optional backup trigger: Every Saturday 09:50 Asia/Taipei
+Every Saturday 09:00 Asia/Taipei
 ```
+
+This gives the 10:00 ChatGPT scheduled report a one-hour buffer.
 
 ## ChatGPT scheduled-report JSON URL
 
@@ -83,9 +130,6 @@ Or use the shorter version:
 https://raw.githubusercontent.com/uptonke/yahoo-finance/main/data/fed_labor_pivot_monitor_brief.json
 ```
 
-## Design notes
+## NFP revisions
 
-- Numeric data comes from FRED API.
-- Final Fed pivot classification still requires LLM review of official Federal Reserve communication.
-- Prior two-month NFP revisions require a previous committed PAYEMS snapshot. The first run will mark this metric as unavailable; later runs can compute it by comparing the current PAYEMS levels with the previous JSON snapshot.
-- This patch does not modify the existing `main.py`.
+Prior two-month NFP revisions are computed by comparing the latest PAYEMS levels against the previous committed JSON snapshot. The first successful run may mark this metric as unavailable; later runs can compute it once a prior snapshot exists.

@@ -62,6 +62,12 @@ SERIES = {
         "frequency": "monthly",
         "required": True,
     },
+    "U6RATE": {
+        "name": "U-6 Unemployment Rate",
+        "unit": "percent",
+        "frequency": "monthly",
+        "required": False,
+    },
     "SAHMREALTIME": {
         "name": "Real-time Sahm Rule Recession Indicator",
         "unit": "percentage points",
@@ -108,6 +114,48 @@ SERIES = {
         "name": "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity",
         "unit": "percent",
         "frequency": "daily",
+        "required": False,
+    },
+    "TEMPHELPS": {
+        "name": "All Employees, Temporary Help Services",
+        "unit": "thousand persons",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "AWHAETP": {
+        "name": "Average Weekly Hours of All Employees, Total Private",
+        "unit": "hours",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "LNS13023621": {
+        "name": "Unemployed Job Losers",
+        "unit": "thousand persons",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "PCEPI": {
+        "name": "Personal Consumption Expenditures Price Index",
+        "unit": "index 2017=100",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "PCEPILFE": {
+        "name": "Core PCE Price Index Less Food and Energy",
+        "unit": "index 2017=100",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "CPIAUCSL": {
+        "name": "Consumer Price Index for All Urban Consumers: All Items",
+        "unit": "index 1982-1984=100",
+        "frequency": "monthly",
+        "required": False,
+    },
+    "CPILFESL": {
+        "name": "Core CPI Less Food and Energy",
+        "unit": "index 1982-1984=100",
+        "frequency": "monthly",
         "required": False,
     },
 }
@@ -344,6 +392,130 @@ def cycle_high(obs: List[FredObservation], lookback: int = 52) -> Optional[bool]
     return obs[0].value >= max(item.value for item in sample)
 
 
+def level_change(obs: List[FredObservation], periods: int) -> Optional[float]:
+    """Latest minus observation N periods ago, where obs is latest-first."""
+    if len(obs) <= periods:
+        return None
+    return obs[0].value - obs[periods].value
+
+
+def pct_change_over_period(obs: List[FredObservation], periods: int) -> Optional[float]:
+    if len(obs) <= periods or obs[periods].value == 0:
+        return None
+    return (obs[0].value / obs[periods].value - 1.0) * 100.0
+
+
+def annualized_index_change_pct(obs: List[FredObservation], periods: int) -> Optional[float]:
+    """Annualized percent change for monthly price-index series, latest-first."""
+    if len(obs) <= periods or obs[periods].value <= 0 or obs[0].value <= 0:
+        return None
+    return ((obs[0].value / obs[periods].value) ** (12.0 / periods) - 1.0) * 100.0
+
+
+def classify_secondary_bool(triggered: Optional[bool]) -> str:
+    if triggered is None:
+        return "data_unavailable"
+    return "yellow" if triggered else "green"
+
+
+def classify_u6(value_mom_pp: Optional[float], value_3m_pp: Optional[float]) -> str:
+    if value_mom_pp is None and value_3m_pp is None:
+        return "data_unavailable"
+    if value_mom_pp is not None and value_mom_pp >= 0.2:
+        return "yellow"
+    if value_3m_pp is not None and value_3m_pp >= 0.3:
+        return "yellow"
+    return "green"
+
+
+def classify_avg_weekly_hours(change_3m_hours: Optional[float]) -> str:
+    if change_3m_hours is None:
+        return "data_unavailable"
+    return "yellow" if change_3m_hours <= -0.1 else "green"
+
+
+def classify_temp_help(consecutive_declines: Optional[bool], pct_3m: Optional[float]) -> str:
+    if consecutive_declines is None and pct_3m is None:
+        return "data_unavailable"
+    if consecutive_declines is True:
+        return "yellow"
+    if pct_3m is not None and pct_3m <= -1.0:
+        return "yellow"
+    return "green"
+
+
+def classify_job_losers(consecutive_incs: Optional[bool], pct_3m: Optional[float]) -> str:
+    if consecutive_incs is None and pct_3m is None:
+        return "data_unavailable"
+    if consecutive_incs is True:
+        return "yellow"
+    if pct_3m is not None and pct_3m >= 5.0:
+        return "yellow"
+    return "green"
+
+
+def classify_inflation_pressure(yoy_pct: Optional[float], three_m_ann_pct: Optional[float], is_core: bool = False) -> str:
+    """
+    Classify inflation as a constraint on a labor-driven Fed pivot.
+    These are heuristic gates, not independent trading signals.
+    """
+    if yoy_pct is None and three_m_ann_pct is None:
+        return "data_unavailable"
+    high_level = 3.0 if is_core else 3.5
+    medium_level = 2.5 if is_core else 3.0
+    values = [v for v in [yoy_pct, three_m_ann_pct] if v is not None]
+    if any(v >= high_level for v in values):
+        return "high"
+    if any(v >= medium_level for v in values):
+        return "medium"
+    return "low"
+
+
+def build_inflation_metric(obs: List[FredObservation], series_id: str, is_core: bool) -> Dict[str, Any]:
+    latest_obs = latest(obs)
+    yoy = pct_change_over_period(obs, 12)
+    three_m_ann = annualized_index_change_pct(obs, 3)
+    one_m_ann = annualized_index_change_pct(obs, 1)
+    return {
+        "latest_period": latest_obs.date if latest_obs else None,
+        "index_value": round_or_none(latest_obs.value if latest_obs else None, 3),
+        "yoy_percent": round_or_none(yoy, 2),
+        "three_month_annualized_percent": round_or_none(three_m_ann, 2),
+        "one_month_annualized_percent": round_or_none(one_m_ann, 2),
+        "status": classify_inflation_pressure(yoy, three_m_ann, is_core=is_core),
+        "threshold": "core: medium >=2.5%, high >=3.0%; headline: medium >=3.0%, high >=3.5%",
+        "source_series": series_id,
+        "role": "inflation constraint on Fed labor pivot, not a standalone inflation monitor",
+    }
+
+
+def combine_inflation_gate(core_pce_status: str, core_cpi_status: str) -> Dict[str, Any]:
+    statuses = [s for s in [core_pce_status, core_cpi_status] if s != "data_unavailable"]
+    if not statuses:
+        return {
+            "status": "data_unavailable",
+            "label_zh": "不判斷",
+            "interpretation_zh": "Core PCE 與 Core CPI 資料不足，無法判斷通膨是否壓住 Fed 轉向空間。",
+        }
+    if "high" in statuses:
+        return {
+            "status": "high",
+            "label_zh": "高度限制",
+            "interpretation_zh": "核心通膨仍偏熱或重新加速；即使勞動轉弱，Fed 轉向空間也被壓住。",
+        }
+    if "medium" in statuses:
+        return {
+            "status": "medium",
+            "label_zh": "中度限制",
+            "interpretation_zh": "核心通膨沒有完全放行 Fed pivot；勞動惡化較可能先被解讀為風險平衡調整，而非立即轉向。",
+        }
+    return {
+        "status": "low",
+        "label_zh": "限制較低",
+        "interpretation_zh": "核心通膨未明顯重新加速；若勞動數據惡化，Fed 較有空間承認就業下行風險。",
+    }
+
+
 def compute_payems_revision(payems_obs: List[FredObservation], previous_payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Compute prior two-month NFP revisions from prior committed PAYEMS snapshot.
@@ -426,6 +598,14 @@ def derive_numeric_payload(series_data: Dict[str, List[FredObservation]], series
     jolts_quits_rate = series_data.get("JTSQUR", [])
     jolts_layoffs = series_data.get("JTSLDL", [])
     dgs2 = series_data.get("DGS2", [])
+    u6rate = series_data.get("U6RATE", [])
+    temp_help = series_data.get("TEMPHELPS", [])
+    avg_weekly_hours = series_data.get("AWHAETP", [])
+    job_losers = series_data.get("LNS13023621", [])
+    headline_pce = series_data.get("PCEPI", [])
+    core_pce = series_data.get("PCEPILFE", [])
+    headline_cpi = series_data.get("CPIAUCSL", [])
+    core_cpi = series_data.get("CPILFESL", [])
 
     nfp_changes = changes_from_level_series(payems, 3)
     nfp_headline = nfp_changes[0]["change"] if nfp_changes else None
@@ -463,6 +643,27 @@ def derive_numeric_payload(series_data: Dict[str, List[FredObservation]], series
     dgs2_change_4w = None
     if len(dgs2) >= 20:
         dgs2_change_4w = dgs2[0].value - dgs2[19].value
+
+    u6_latest = latest(u6rate)
+    u6_mom = level_change(u6rate, 1)
+    u6_3m_change = level_change(u6rate, 3)
+
+    temp_help_latest = latest(temp_help)
+    temp_help_declines_3m = consecutive_decreases(temp_help, 3)
+    temp_help_3m_pct = pct_change_over_period(temp_help, 3)
+
+    avg_hours_latest = latest(avg_weekly_hours)
+    avg_hours_3m_change = level_change(avg_weekly_hours, 3)
+
+    job_losers_latest = latest(job_losers)
+    job_losers_increases_3m = consecutive_increases(job_losers, 3)
+    job_losers_3m_pct = pct_change_over_period(job_losers, 3)
+
+    headline_pce_metric = build_inflation_metric(headline_pce, "PCEPI", is_core=False)
+    core_pce_metric = build_inflation_metric(core_pce, "PCEPILFE", is_core=True)
+    headline_cpi_metric = build_inflation_metric(headline_cpi, "CPIAUCSL", is_core=False)
+    core_cpi_metric = build_inflation_metric(core_cpi, "CPILFESL", is_core=True)
+    inflation_gate = combine_inflation_gate(core_pce_metric["status"], core_cpi_metric["status"])
 
     metrics: Dict[str, Any] = {
         "nfp_headline": {
@@ -539,6 +740,50 @@ def derive_numeric_payload(series_data: Dict[str, List[FredObservation]], series
             "source_series": "JTSLDL",
             "consecutive_3m_increases": layoffs_increases_3m,
         },
+        "u6_unemployment_rate": {
+            "latest_period": u6_latest.date if u6_latest else None,
+            "value_percent": round_or_none(u6_latest.value if u6_latest else None, 2),
+            "mom_change_pp": round_or_none(u6_mom, 2),
+            "three_month_change_pp": round_or_none(u6_3m_change, 2),
+            "status": classify_u6(u6_mom, u6_3m_change),
+            "threshold": "secondary confirmation: MoM >=0.2pp or 3M change >=0.3pp",
+            "source_series": "U6RATE",
+            "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
+        },
+        "average_weekly_hours_total_private": {
+            "latest_period": avg_hours_latest.date if avg_hours_latest else None,
+            "value_hours": round_or_none(avg_hours_latest.value if avg_hours_latest else None, 2),
+            "three_month_change_hours": round_or_none(avg_hours_3m_change, 2),
+            "status": classify_avg_weekly_hours(avg_hours_3m_change),
+            "threshold": "secondary confirmation: 3M change <= -0.1 hours",
+            "source_series": "AWHAETP",
+            "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
+        },
+        "temporary_help_services": {
+            "latest_period": temp_help_latest.date if temp_help_latest else None,
+            "value_thousand": round_or_none(temp_help_latest.value if temp_help_latest else None, 1),
+            "three_month_percent_change": round_or_none(temp_help_3m_pct, 2),
+            "consecutive_3m_declines": temp_help_declines_3m,
+            "status": classify_temp_help(temp_help_declines_3m, temp_help_3m_pct),
+            "threshold": "secondary confirmation: 3 consecutive monthly declines or 3M change <= -1%",
+            "source_series": "TEMPHELPS",
+            "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
+        },
+        "job_losers": {
+            "latest_period": job_losers_latest.date if job_losers_latest else None,
+            "value_thousand": round_or_none(job_losers_latest.value if job_losers_latest else None, 1),
+            "three_month_percent_change": round_or_none(job_losers_3m_pct, 2),
+            "consecutive_3m_increases": job_losers_increases_3m,
+            "status": classify_job_losers(job_losers_increases_3m, job_losers_3m_pct),
+            "threshold": "secondary confirmation: 3 consecutive monthly increases or 3M change >=5%",
+            "source_series": "LNS13023621",
+            "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
+        },
+        "headline_pce": headline_pce_metric,
+        "core_pce": core_pce_metric,
+        "headline_cpi": headline_cpi_metric,
+        "core_cpi": core_cpi_metric,
+        "inflation_constraint_on_fed_pivot": inflation_gate,
         "two_year_treasury_yield": {
             "latest_period": dgs2_latest.date if dgs2_latest else None,
             "value_percent": round_or_none(dgs2_latest.value if dgs2_latest else None, 3),
@@ -547,6 +792,34 @@ def derive_numeric_payload(series_data: Dict[str, List[FredObservation]], series
             "threshold": "market confirmation only; not used for labor-regime classification",
             "source_series": "DGS2",
         },
+    }
+
+    secondary_statuses = [
+        metrics["u6_unemployment_rate"]["status"],
+        metrics["average_weekly_hours_total_private"]["status"],
+        metrics["temporary_help_services"]["status"],
+        metrics["job_losers"]["status"],
+    ]
+    secondary_adverse_count = sum(1 for s in secondary_statuses if status_rank(s) >= 1)
+    if secondary_adverse_count >= 3:
+        secondary_strength = "high"
+    elif secondary_adverse_count >= 2:
+        secondary_strength = "medium"
+    elif secondary_adverse_count >= 1:
+        secondary_strength = "low"
+    else:
+        secondary_strength = "none"
+    metrics["labor_quality_secondary_confirmation"] = {
+        "status": secondary_strength,
+        "adverse_indicator_count": secondary_adverse_count,
+        "total_available_secondary_indicators": sum(1 for s in secondary_statuses if s != "data_unavailable"),
+        "indicators": {
+            "u6_unemployment_rate": metrics["u6_unemployment_rate"]["status"],
+            "average_weekly_hours_total_private": metrics["average_weekly_hours_total_private"]["status"],
+            "temporary_help_services": metrics["temporary_help_services"]["status"],
+            "job_losers": metrics["job_losers"]["status"],
+        },
+        "rule": "Secondary indicators may raise confidence within YELLOW/ORANGE/RED, but must not independently trigger RED or PIVOT CONFIRMED.",
     }
 
     decisive_statuses = [
@@ -601,12 +874,12 @@ def derive_numeric_payload(series_data: Dict[str, List[FredObservation]], series
         warnings.append("NFP prior two-month revision is unavailable until at least one prior PAYEMS snapshot exists.")
 
     return {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "generated_at_utc": now_iso_utc(),
         "generated_date_taipei": today_taipei(),
         "data_status": data_status,
         "numeric_regime_preliminary": numeric_regime,
-        "important_note": "This JSON provides deterministic numeric inputs only. Final Fed pivot classification still requires official Federal Reserve communication review.",
+        "important_note": "This JSON provides deterministic numeric inputs. Core labor indicators drive the preliminary regime; secondary labor-quality and inflation-gate indicators provide confirmation/constraints. Final Fed pivot classification still requires official Federal Reserve communication review.",
         "series_health": series_health,
         "latest_observation_dates": latest_observation_dates,
         "missing_required_series": missing_required,
@@ -635,6 +908,18 @@ def build_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
             "initial_claims_4w_avg": metrics.get("initial_claims_4w_avg"),
             "continuing_claims": metrics.get("continuing_claims"),
             "jolts_openings": metrics.get("jolts_openings"),
+            "jolts_quits_rate": metrics.get("jolts_quits_rate"),
+            "jolts_layoffs": metrics.get("jolts_layoffs"),
+            "u6_unemployment_rate": metrics.get("u6_unemployment_rate"),
+            "average_weekly_hours_total_private": metrics.get("average_weekly_hours_total_private"),
+            "temporary_help_services": metrics.get("temporary_help_services"),
+            "job_losers": metrics.get("job_losers"),
+            "labor_quality_secondary_confirmation": metrics.get("labor_quality_secondary_confirmation"),
+            "headline_pce": metrics.get("headline_pce"),
+            "core_pce": metrics.get("core_pce"),
+            "headline_cpi": metrics.get("headline_cpi"),
+            "core_cpi": metrics.get("core_cpi"),
+            "inflation_constraint_on_fed_pivot": metrics.get("inflation_constraint_on_fed_pivot"),
             "two_year_treasury_yield": metrics.get("two_year_treasury_yield"),
         },
     }
