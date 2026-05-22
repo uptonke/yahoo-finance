@@ -36,6 +36,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/fed_labor_pivot_monitor.json data/fed_labor_pivot_monitor_brief.json
+          git add data/fed_labor_pivot_monitor.json data/fed_labor_pivot_monitor_brief.json data/fed_labor_pivot_monitor_history.jsonl
           git commit -m "Update Fed labor pivot data" || echo "No changes to commit"
           git push
