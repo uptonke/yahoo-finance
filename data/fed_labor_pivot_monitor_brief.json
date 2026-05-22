@@ -1,0 +1,152 @@
+{
+  "data_status": "DATA_VALID",
+  "generated_at_utc": "2026-05-22T14:57:35+00:00",
+  "generated_date_taipei": "2026-05-22",
+  "latest_observation_dates": {
+    "CC4WSA": "2026-05-09",
+    "CCSA": "2026-05-09",
+    "DGS2": "2026-05-20",
+    "ICSA": "2026-05-16",
+    "JTSJOL": "2026-03-01",
+    "JTSLDL": "2026-03-01",
+    "JTSQUR": "2026-03-01",
+    "PAYEMS": "2026-04-01",
+    "SAHMREALTIME": "2026-04-01",
+    "UNRATE": "2026-04-01"
+  },
+  "metrics": {
+    "continuing_claims": {
+      "consecutive_3w_increases": false,
+      "cycle_high_52w": false,
+      "latest_period": "2026-05-09",
+      "source_series": "CC4WSA",
+      "status": "green",
+      "threshold": "consecutive increases or 52-week cycle high",
+      "value_persons": 1773000.0
+    },
+    "initial_claims_4w_avg": {
+      "components": [
+        {
+          "date": "2026-05-16",
+          "value_persons": 209000.0
+        },
+        {
+          "date": "2026-05-09",
+          "value_persons": 212000.0
+        },
+        {
+          "date": "2026-05-02",
+          "value_persons": 199000.0
+        },
+        {
+          "date": "2026-04-25",
+          "value_persons": 190000.0
+        }
+      ],
+      "latest_period": "2026-05-16",
+      "source_series": "ICSA",
+      "status": "green",
+      "threshold": "yellow >250k; orange >275k; red >300k",
+      "value_persons": 202500.0
+    },
+    "jolts_openings": {
+      "consecutive_3m_declines": false,
+      "latest_4_observations": [
+        {
+          "date": "2026-03-01",
+          "value_thousand": 6866.0
+        },
+        {
+          "date": "2026-02-01",
+          "value_thousand": 6922.0
+        },
+        {
+          "date": "2026-01-01",
+          "value_thousand": 7240.0
+        },
+        {
+          "date": "2025-12-01",
+          "value_thousand": 6550.0
+        }
+      ],
+      "latest_period": "2026-03-01",
+      "source_series": "JTSJOL",
+      "status": "green",
+      "threshold": "3 consecutive monthly declines",
+      "value_thousand": 6866.0
+    },
+    "nfp_3m_avg": {
+      "components": [
+        {
+          "change": 115.0,
+          "current_level": 158736.0,
+          "period": "2026-04-01",
+          "previous_level": 158621.0
+        },
+        {
+          "change": 185.0,
+          "current_level": 158621.0,
+          "period": "2026-03-01",
+          "previous_level": 158436.0
+        },
+        {
+          "change": -156.0,
+          "current_level": 158436.0,
+          "period": "2026-02-01",
+          "previous_level": 158592.0
+        }
+      ],
+      "latest_period": "2026-04-01",
+      "source_series": "PAYEMS",
+      "status": "red",
+      "threshold": "yellow <75k; red <50k",
+      "value_thousand": 48.0
+    },
+    "nfp_headline": {
+      "calculation": "latest PAYEMS level minus previous monthly PAYEMS level",
+      "latest_period": "2026-04-01",
+      "source_series": "PAYEMS",
+      "status": "green",
+      "threshold": "yellow <75k; red <50k",
+      "value_thousand": 115.0
+    },
+    "nfp_prior_two_month_revision": {
+      "details": [],
+      "downward_revision_abs_thousand": null,
+      "latest_payems_period": "2026-04-01",
+      "method": "Compare current PAYEMS levels against previous committed snapshot for the two months before latest release.",
+      "net_revision_thousand": null,
+      "note": "First run or missing previous PAYEMS snapshot; revision metric will become available after the next successful run.",
+      "status": "data_unavailable",
+      "target_periods": []
+    },
+    "sahm_rule_realtime": {
+      "latest_period": "2026-04-01",
+      "source_series": "SAHMREALTIME",
+      "status": "green",
+      "threshold": "yellow >=0.30; orange >=0.40; red >=0.50",
+      "value_pp": 0.13
+    },
+    "two_year_treasury_yield": {
+      "change_approx_4w_pp": 0.21,
+      "latest_period": "2026-05-20",
+      "source_series": "DGS2",
+      "status": "not_applicable",
+      "threshold": "market confirmation only; not used for labor-regime classification",
+      "value_percent": 4.04
+    },
+    "unemployment_rate_u3": {
+      "latest_period": "2026-04-01",
+      "mom_change_pp": 0.0,
+      "source_series": "UNRATE",
+      "status": "green",
+      "threshold": "month-over-month increase >=0.2 percentage points",
+      "value_percent": 4.3
+    }
+  },
+  "numeric_regime_preliminary": "RED",
+  "schema_version": "1.0.0",
+  "warnings": [
+    "NFP prior two-month revision is unavailable until at least one prior PAYEMS snapshot exists."
+  ]
+}
