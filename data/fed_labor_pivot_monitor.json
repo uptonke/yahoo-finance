@@ -1,7 +1,7 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-05-23T01:00:44+00:00",
-  "generated_date_taipei": "2026-05-23",
+  "generated_at_utc": "2026-05-25T01:23:54+00:00",
+  "generated_date_taipei": "2026-05-25",
   "important_note": "This JSON provides deterministic numeric inputs. Core labor indicators drive the preliminary regime; secondary labor-quality and inflation-gate indicators provide confirmation/constraints. Final Fed pivot classification still requires official Federal Reserve communication review.",
   "latest_observation_dates": {
     "AWHAETP": "2026-04-01",
