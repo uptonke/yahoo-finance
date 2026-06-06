@@ -1,6 +1,6 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-06-06T01:01:12+00:00",
+  "generated_at_utc": "2026-06-06T03:39:26+00:00",
   "generated_date_taipei": "2026-06-06",
   "latest_observation_dates": {
     "AWHAETP": "2026-05-01",
@@ -219,20 +219,20 @@
         {
           "current_level_thousand": 158829.0,
           "period": "2026-04-01",
-          "previous_snapshot_level_thousand": 158736.0,
-          "revision_thousand": 93.0
+          "previous_snapshot_level_thousand": 158829.0,
+          "revision_thousand": 0.0
         },
         {
           "current_level_thousand": 158650.0,
           "period": "2026-03-01",
-          "previous_snapshot_level_thousand": 158621.0,
-          "revision_thousand": 29.0
+          "previous_snapshot_level_thousand": 158650.0,
+          "revision_thousand": 0.0
         }
       ],
       "downward_revision_abs_thousand": 0.0,
       "latest_payems_period": "2026-05-01",
       "method": "Compare current PAYEMS levels against previous committed snapshot for the two months before latest release.",
-      "net_revision_thousand": 122.0,
+      "net_revision_thousand": 0.0,
       "note": null,
       "status": "green",
       "target_periods": [
