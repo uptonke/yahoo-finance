@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13T22:53:40.789312+00:00",
+  "generated_at": "2026-06-14T22:53:36.196703+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -83,60 +83,42 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "1,148,372,482",
-      "single_day_raw": 1148372482,
-      "date": "2026-06-12",
-      "source_used": "twse+tpex",
-      "market_scope": "listed+otc",
-      "structural_read": "外資當日偏多，上市櫃合計呈現淨買超",
+      "single_day": "N/A",
+      "single_day_raw": null,
+      "date": "2026-06-15",
+      "source_used": null,
+      "market_scope": null,
+      "structural_read": "資料不足，無法判定外資當日方向",
       "source_payload": {
         "twse": {
-          "status": "ok",
-          "single_day": "1,038,178,607",
-          "single_day_raw": 1038178607,
-          "date": "2026-06-12",
-          "raw_date": "20260612",
-          "source": "official_api_json",
-          "title": "115年06月12日 三大法人買賣超日報",
-          "stat": "OK",
-          "row_count": 1316,
-          "foreign_ex_dealer_single_day": "1,038,178,607",
-          "foreign_ex_dealer_single_day_raw": 1038178607,
-          "foreign_dealer_single_day": "0",
-          "foreign_dealer_single_day_raw": 0,
-          "foreign_total_single_day": "1,038,178,607",
-          "foreign_total_single_day_raw": 1038178607,
-          "three_insti_total_single_day": "1,251,004,582",
-          "three_insti_total_single_day_raw": 1251004582,
+          "status": "error",
+          "single_day": "N/A",
+          "single_day_raw": null,
+          "date": "2026-06-15",
+          "raw_date": "20260615",
+          "error": "TWSE API returned no data/fields",
           "url": "https://www.twse.com.tw/rwd/zh/fund/T86",
           "request_params": {
             "response": "json",
-            "date": "20260612",
+            "date": "20260615",
             "selectType": "ALLBUT0999"
           },
-          "note": "Parsed from official TWSE T86 JSON route."
+          "raw_payload": {
+            "stat": "很抱歉，沒有符合條件的資料!",
+            "total": 0
+          }
         },
         "tpex": {
-          "status": "ok",
-          "single_day": "110,193,875",
-          "single_day_raw": 110193875,
-          "date": "2026-06-12",
-          "raw_date": "115/06/12",
-          "source": "official_api_json",
-          "title": "三大法人買賣明細資訊",
-          "row_count": 4911,
-          "foreign_ex_dealer_single_day": "110,193,875",
-          "foreign_ex_dealer_single_day_raw": 110193875,
-          "foreign_total_single_day": "110,193,875",
-          "foreign_total_single_day_raw": 110193875,
-          "three_insti_total_single_day": "180,065,465",
-          "three_insti_total_single_day_raw": 180065465,
+          "status": "error",
+          "single_day": "N/A",
+          "single_day_raw": null,
+          "date": null,
+          "error": "Response ended prematurely",
           "url": "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade",
           "request_payload": {
             "type": "Daily",
             "sect": "AL"
-          },
-          "note": "Parsed from official TPEX POST API /www/zh-tw/insti/dailyTrade"
+          }
         }
       }
     },
@@ -263339,6 +263321,6 @@
     "stale_guard_passed": true,
     "stale_market_items": [],
     "stale_foreign_flow_items": [],
-    "foreign_flow_single_day_raw_type": "int"
+    "foreign_flow_single_day_raw_type": "NoneType"
   }
 }
