@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T22:53:42.730843+00:00",
+  "generated_at": "2026-06-20T22:53:40.937787+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -83,12 +83,12 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "N/A",
-      "single_day_raw": null,
-      "date": "2026-06-20",
-      "source_used": null,
-      "market_scope": null,
-      "structural_read": "資料不足，無法判定外資當日方向"
+      "single_day": "149,883,587",
+      "single_day_raw": 149883587,
+      "date": "2026-06-18",
+      "source_used": "tpex",
+      "market_scope": "tpex",
+      "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
     },
     "semiconductor_supply_chain": {
       "core_logic": [
@@ -240,6 +240,6 @@
     "stale_guard_passed": true,
     "stale_market_items": [],
     "stale_foreign_flow_items": [],
-    "foreign_flow_single_day_raw_type": "NoneType"
+    "foreign_flow_single_day_raw_type": "int"
   }
 }
