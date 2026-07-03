@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-02T22:53:33.176824+00:00",
+  "generated_at": "2026-07-03T22:53:33.812867+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -83,12 +83,12 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "-379,914,094",
-      "single_day_raw": -379914094,
-      "date": "2026-07-02",
+      "single_day": "285,750,761",
+      "single_day_raw": 285750761,
+      "date": "2026-07-03",
       "source_used": "twse+tpex",
       "market_scope": "listed+otc",
-      "structural_read": "外資當日偏空，上市櫃合計呈現淨賣超"
+      "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
     },
     "semiconductor_supply_chain": {
       "core_logic": [
