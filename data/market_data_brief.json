@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-11T22:53:32.666600+00:00",
+  "generated_at": "2026-07-13T22:53:43.209329+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,10 +34,10 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "754.95",
-          "display_change": "+3.24 (+0.43%)",
-          "as_of_label": "latest close (2026-07-10)",
-          "direction": "up",
+          "display_close": "749.17",
+          "display_change": "-5.78 (-0.77%)",
+          "as_of_label": "latest close (2026-07-13)",
+          "direction": "down",
           "required": true
         }
       ],
@@ -54,17 +54,17 @@
       "fx": [
         {
           "display_name": "USD/TWD",
-          "display_close": "31.8600",
-          "display_change": "-0.0200 (-0.06%)",
-          "as_of_label": "latest close (2026-07-02)",
+          "display_close": "32.0900",
+          "display_change": "-0.0700 (-0.22%)",
+          "as_of_label": "latest close (2026-07-10)",
           "direction": "down",
           "required": true
         },
         {
           "display_name": "US Dollar Broad Index Proxy",
-          "display_close": "120.69",
-          "display_change": "-0.46 (-0.38%)",
-          "as_of_label": "latest close (2026-07-02)",
+          "display_close": "120.50",
+          "display_change": "-0.25 (-0.21%)",
+          "as_of_label": "latest close (2026-07-10)",
           "direction": "down",
           "required": true
         }
@@ -72,10 +72,10 @@
       "rates": [
         {
           "display_name": "US 10Y Treasury Yield",
-          "display_close": "4.540%",
-          "display_change": "-0.020pp (-0.44%)",
-          "as_of_label": "latest close (2026-07-09)",
-          "direction": "down",
+          "display_close": "4.560%",
+          "display_change": "+0.020pp (+0.44%)",
+          "as_of_label": "latest close (2026-07-10)",
+          "direction": "up",
           "required": true
         }
       ]
@@ -83,12 +83,12 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "67,088,546",
-      "single_day_raw": 67088546,
-      "date": "2026-07-09",
+      "single_day": "-451,031,374",
+      "single_day_raw": -451031374,
+      "date": "2026-07-13",
       "source_used": "twse+tpex",
       "market_scope": "listed+otc",
-      "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
+      "structural_read": "外資當日偏空，上市櫃合計呈現淨賣超"
     },
     "semiconductor_supply_chain": {
       "core_logic": [
@@ -98,7 +98,7 @@
       "judgment": "需求 > 成本壓力（短期仍偏多），但波動放大"
     },
     "fx": {
-      "usd_twd_spot": "31.8600",
+      "usd_twd_spot": "32.0900",
       "assessment": [
         "若油價上行 → USD 轉強",
         "若風險偏好回升 → TWD 偏強"
@@ -118,16 +118,16 @@
       "priority": 10,
       "required": true,
       "max_staleness_days": null,
-      "date": "2026-07-10",
-      "close": 754.95,
-      "prev_close": 751.71,
-      "change": 3.24,
-      "change_pct": 0.43,
-      "direction": "up",
+      "date": "2026-07-13",
+      "close": 749.17,
+      "prev_close": 754.95,
+      "change": -5.78,
+      "change_pct": -0.77,
+      "direction": "down",
       "market_session_label": "latest",
-      "display_close": "754.95",
-      "display_change": "+3.24 (+0.43%)",
-      "as_of_label": "latest close (2026-07-10)",
+      "display_close": "749.17",
+      "display_change": "-5.78 (-0.77%)",
+      "as_of_label": "latest close (2026-07-13)",
       "note": "Using SPY ETF as S&P 500 proxy."
     },
     "taiex": {
@@ -176,16 +176,16 @@
       "priority": 40,
       "required": true,
       "max_staleness_days": 10,
-      "date": "2026-07-02",
-      "close": 31.86,
-      "prev_close": 31.88,
-      "change": -0.02,
-      "change_pct": -0.06,
+      "date": "2026-07-10",
+      "close": 32.09,
+      "prev_close": 32.16,
+      "change": -0.07,
+      "change_pct": -0.22,
       "direction": "down",
       "market_session_label": "latest",
-      "display_close": "31.8600",
-      "display_change": "-0.0200 (-0.06%)",
-      "as_of_label": "latest close (2026-07-02)",
+      "display_close": "32.0900",
+      "display_change": "-0.0700 (-0.22%)",
+      "as_of_label": "latest close (2026-07-10)",
       "note": "Using FRED DEXTAUS: Taiwan dollars to one U.S. dollar."
     },
     "dxy_proxy": {
@@ -199,16 +199,16 @@
       "priority": 50,
       "required": true,
       "max_staleness_days": 10,
-      "date": "2026-07-02",
-      "close": 120.69,
-      "prev_close": 121.15,
-      "change": -0.46,
-      "change_pct": -0.38,
+      "date": "2026-07-10",
+      "close": 120.5,
+      "prev_close": 120.75,
+      "change": -0.25,
+      "change_pct": -0.21,
       "direction": "down",
       "market_session_label": "latest",
-      "display_close": "120.69",
-      "display_change": "-0.46 (-0.38%)",
-      "as_of_label": "latest close (2026-07-02)",
+      "display_close": "120.50",
+      "display_change": "-0.25 (-0.21%)",
+      "as_of_label": "latest close (2026-07-10)",
       "note": "FRED broad dollar index proxy; not identical to ICE DXY."
     },
     "us10y": {
@@ -222,16 +222,16 @@
       "priority": 60,
       "required": true,
       "max_staleness_days": 7,
-      "date": "2026-07-09",
-      "close": 4.54,
-      "prev_close": 4.56,
-      "change": -0.02,
-      "change_pct": -0.44,
-      "direction": "down",
+      "date": "2026-07-10",
+      "close": 4.56,
+      "prev_close": 4.54,
+      "change": 0.02,
+      "change_pct": 0.44,
+      "direction": "up",
       "market_session_label": "latest",
-      "display_close": "4.540%",
-      "display_change": "-0.020pp (-0.44%)",
-      "as_of_label": "latest close (2026-07-09)",
+      "display_close": "4.560%",
+      "display_change": "+0.020pp (+0.44%)",
+      "as_of_label": "latest close (2026-07-10)",
       "unit": "%"
     }
   },
