@@ -1,22 +1,22 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-07-25T01:01:39+00:00",
-  "generated_date_taipei": "2026-07-25",
+  "generated_at_utc": "2026-08-01T01:00:55+00:00",
+  "generated_date_taipei": "2026-08-01",
   "latest_observation_dates": {
     "AWHAETP": "2026-06-01",
-    "CC4WSA": "2026-07-11",
-    "CCSA": "2026-07-11",
+    "CC4WSA": "2026-07-18",
+    "CCSA": "2026-07-18",
     "CPIAUCSL": "2026-06-01",
     "CPILFESL": "2026-06-01",
-    "DGS2": "2026-07-23",
-    "ICSA": "2026-07-18",
+    "DGS2": "2026-07-30",
+    "ICSA": "2026-07-25",
     "JTSJOL": "2026-05-01",
     "JTSLDL": "2026-05-01",
     "JTSQUR": "2026-05-01",
     "LNS13023621": "2026-06-01",
     "PAYEMS": "2026-06-01",
-    "PCEPI": "2026-05-01",
-    "PCEPILFE": "2026-05-01",
+    "PCEPI": "2026-06-01",
+    "PCEPILFE": "2026-06-01",
     "SAHMREALTIME": "2026-06-01",
     "TEMPHELPS": "2026-06-01",
     "U6RATE": "2026-06-01",
@@ -35,11 +35,11 @@
     "continuing_claims": {
       "consecutive_3w_increases": false,
       "cycle_high_52w": false,
-      "latest_period": "2026-07-11",
+      "latest_period": "2026-07-18",
       "source_series": "CC4WSA",
       "status": "green",
       "threshold": "consecutive increases or 52-week cycle high",
-      "value_persons": 1805250.0
+      "value_persons": 1797500.0
     },
     "core_cpi": {
       "index_value": 336.065,
@@ -53,15 +53,15 @@
       "yoy_percent": 2.81
     },
     "core_pce": {
-      "index_value": 130.082,
-      "latest_period": "2026-05-01",
-      "one_month_annualized_percent": 3.91,
+      "index_value": 130.266,
+      "latest_period": "2026-06-01",
+      "one_month_annualized_percent": 1.6,
       "role": "inflation constraint on Fed labor pivot, not a standalone inflation monitor",
       "source_series": "PCEPILFE",
       "status": "high",
-      "three_month_annualized_percent": 3.52,
+      "three_month_annualized_percent": 2.89,
       "threshold": "core: medium >=2.5%, high >=3.0%; headline: medium >=3.0%, high >=3.5%",
-      "yoy_percent": 3.41
+      "yoy_percent": 3.29
     },
     "headline_cpi": {
       "index_value": 332.568,
@@ -75,15 +75,15 @@
       "yoy_percent": 3.73
     },
     "headline_pce": {
-      "index_value": 131.527,
-      "latest_period": "2026-05-01",
-      "one_month_annualized_percent": 5.53,
+      "index_value": 131.392,
+      "latest_period": "2026-06-01",
+      "one_month_annualized_percent": -1.3,
       "role": "inflation constraint on Fed labor pivot, not a standalone inflation monitor",
       "source_series": "PCEPI",
       "status": "high",
-      "three_month_annualized_percent": 6.28,
+      "three_month_annualized_percent": 3.07,
       "threshold": "core: medium >=2.5%, high >=3.0%; headline: medium >=3.0%, high >=3.5%",
-      "yoy_percent": 4.07
+      "yoy_percent": 3.67
     },
     "inflation_constraint_on_fed_pivot": {
       "interpretation_zh": "核心通膨仍偏熱或重新加速；即使勞動轉弱，Fed 轉向空間也被壓住。",
@@ -93,8 +93,12 @@
     "initial_claims_4w_avg": {
       "components": [
         {
+          "date": "2026-07-25",
+          "value_persons": 197000.0
+        },
+        {
           "date": "2026-07-18",
-          "value_persons": 187000.0
+          "value_persons": 188000.0
         },
         {
           "date": "2026-07-11",
@@ -103,17 +107,13 @@
         {
           "date": "2026-07-04",
           "value_persons": 217000.0
-        },
-        {
-          "date": "2026-06-27",
-          "value_persons": 217000.0
         }
       ],
-      "latest_period": "2026-07-18",
+      "latest_period": "2026-07-25",
       "source_series": "ICSA",
       "status": "green",
       "threshold": "yellow >250k; orange >275k; red >300k",
-      "value_persons": 207500.0
+      "value_persons": 202750.0
     },
     "job_losers": {
       "consecutive_3m_increases": false,
@@ -258,12 +258,12 @@
       "value_thousand": 2499.2
     },
     "two_year_treasury_yield": {
-      "change_approx_4w_pp": 0.28,
-      "latest_period": "2026-07-23",
+      "change_approx_4w_pp": 0.09,
+      "latest_period": "2026-07-30",
       "source_series": "DGS2",
       "status": "not_applicable",
       "threshold": "market confirmation only; not used for labor-regime classification",
-      "value_percent": 4.37
+      "value_percent": 4.23
     },
     "u6_unemployment_rate": {
       "latest_period": "2026-06-01",

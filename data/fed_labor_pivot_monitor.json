@@ -1,23 +1,23 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-07-25T01:01:39+00:00",
-  "generated_date_taipei": "2026-07-25",
+  "generated_at_utc": "2026-08-01T01:00:55+00:00",
+  "generated_date_taipei": "2026-08-01",
   "important_note": "This JSON provides deterministic numeric inputs. Core labor indicators drive the preliminary regime; secondary labor-quality and inflation-gate indicators provide confirmation/constraints. Final Fed pivot classification still requires official Federal Reserve communication review.",
   "latest_observation_dates": {
     "AWHAETP": "2026-06-01",
-    "CC4WSA": "2026-07-11",
-    "CCSA": "2026-07-11",
+    "CC4WSA": "2026-07-18",
+    "CCSA": "2026-07-18",
     "CPIAUCSL": "2026-06-01",
     "CPILFESL": "2026-06-01",
-    "DGS2": "2026-07-23",
-    "ICSA": "2026-07-18",
+    "DGS2": "2026-07-30",
+    "ICSA": "2026-07-25",
     "JTSJOL": "2026-05-01",
     "JTSLDL": "2026-05-01",
     "JTSQUR": "2026-05-01",
     "LNS13023621": "2026-06-01",
     "PAYEMS": "2026-06-01",
-    "PCEPI": "2026-05-01",
-    "PCEPILFE": "2026-05-01",
+    "PCEPI": "2026-06-01",
+    "PCEPILFE": "2026-06-01",
     "SAHMREALTIME": "2026-06-01",
     "TEMPHELPS": "2026-06-01",
     "U6RATE": "2026-06-01",
@@ -36,11 +36,11 @@
     "continuing_claims": {
       "consecutive_3w_increases": false,
       "cycle_high_52w": false,
-      "latest_period": "2026-07-11",
+      "latest_period": "2026-07-18",
       "source_series": "CC4WSA",
       "status": "green",
       "threshold": "consecutive increases or 52-week cycle high",
-      "value_persons": 1805250.0
+      "value_persons": 1797500.0
     },
     "core_cpi": {
       "index_value": 336.065,
@@ -54,15 +54,15 @@
       "yoy_percent": 2.81
     },
     "core_pce": {
-      "index_value": 130.082,
-      "latest_period": "2026-05-01",
-      "one_month_annualized_percent": 3.91,
+      "index_value": 130.266,
+      "latest_period": "2026-06-01",
+      "one_month_annualized_percent": 1.6,
       "role": "inflation constraint on Fed labor pivot, not a standalone inflation monitor",
       "source_series": "PCEPILFE",
       "status": "high",
-      "three_month_annualized_percent": 3.52,
+      "three_month_annualized_percent": 2.89,
       "threshold": "core: medium >=2.5%, high >=3.0%; headline: medium >=3.0%, high >=3.5%",
-      "yoy_percent": 3.41
+      "yoy_percent": 3.29
     },
     "headline_cpi": {
       "index_value": 332.568,
@@ -76,15 +76,15 @@
       "yoy_percent": 3.73
     },
     "headline_pce": {
-      "index_value": 131.527,
-      "latest_period": "2026-05-01",
-      "one_month_annualized_percent": 5.53,
+      "index_value": 131.392,
+      "latest_period": "2026-06-01",
+      "one_month_annualized_percent": -1.3,
       "role": "inflation constraint on Fed labor pivot, not a standalone inflation monitor",
       "source_series": "PCEPI",
       "status": "high",
-      "three_month_annualized_percent": 6.28,
+      "three_month_annualized_percent": 3.07,
       "threshold": "core: medium >=2.5%, high >=3.0%; headline: medium >=3.0%, high >=3.5%",
-      "yoy_percent": 4.07
+      "yoy_percent": 3.67
     },
     "inflation_constraint_on_fed_pivot": {
       "interpretation_zh": "核心通膨仍偏熱或重新加速；即使勞動轉弱，Fed 轉向空間也被壓住。",
@@ -94,8 +94,12 @@
     "initial_claims_4w_avg": {
       "components": [
         {
+          "date": "2026-07-25",
+          "value_persons": 197000.0
+        },
+        {
           "date": "2026-07-18",
-          "value_persons": 187000.0
+          "value_persons": 188000.0
         },
         {
           "date": "2026-07-11",
@@ -104,17 +108,13 @@
         {
           "date": "2026-07-04",
           "value_persons": 217000.0
-        },
-        {
-          "date": "2026-06-27",
-          "value_persons": 217000.0
         }
       ],
-      "latest_period": "2026-07-18",
+      "latest_period": "2026-07-25",
       "source_series": "ICSA",
       "status": "green",
       "threshold": "yellow >250k; orange >275k; red >300k",
-      "value_persons": 207500.0
+      "value_persons": 202750.0
     },
     "job_losers": {
       "consecutive_3m_increases": false,
@@ -259,12 +259,12 @@
       "value_thousand": 2499.2
     },
     "two_year_treasury_yield": {
-      "change_approx_4w_pp": 0.28,
-      "latest_period": "2026-07-23",
+      "change_approx_4w_pp": 0.09,
+      "latest_period": "2026-07-30",
       "source_series": "DGS2",
       "status": "not_applicable",
       "threshold": "market confirmation only; not used for labor-regime classification",
-      "value_percent": 4.37
+      "value_percent": 4.23
     },
     "u6_unemployment_rate": {
       "latest_period": "2026-06-01",
@@ -357,8 +357,12 @@
     "CC4WSA": {
       "latest_first": [
         {
+          "date": "2026-07-18",
+          "value": 1797500.0
+        },
+        {
           "date": "2026-07-11",
-          "value": 1805250.0
+          "value": 1803500.0
         },
         {
           "date": "2026-07-04",
@@ -399,14 +403,9 @@
         {
           "date": "2026-05-02",
           "value": 1779500.0
-        },
-        {
-          "date": "2026-04-25",
-          "value": 1787750.0
         }
       ],
       "latest_observations": {
-        "2026-04-25": 1787750.0,
         "2026-05-02": 1779500.0,
         "2026-05-09": 1770250.0,
         "2026-05-16": 1772500.0,
@@ -417,14 +416,19 @@
         "2026-06-20": 1801000.0,
         "2026-06-27": 1809750.0,
         "2026-07-04": 1809250.0,
-        "2026-07-11": 1805250.0
+        "2026-07-11": 1803500.0,
+        "2026-07-18": 1797500.0
       }
     },
     "CCSA": {
       "latest_first": [
         {
+          "date": "2026-07-18",
+          "value": 1782000.0
+        },
+        {
           "date": "2026-07-11",
-          "value": 1796000.0
+          "value": 1789000.0
         },
         {
           "date": "2026-07-04",
@@ -465,14 +469,9 @@
         {
           "date": "2026-05-02",
           "value": 1776000.0
-        },
-        {
-          "date": "2026-04-25",
-          "value": 1758000.0
         }
       ],
       "latest_observations": {
-        "2026-04-25": 1758000.0,
         "2026-05-02": 1776000.0,
         "2026-05-09": 1771000.0,
         "2026-05-16": 1785000.0,
@@ -483,7 +482,8 @@
         "2026-06-20": 1806000.0,
         "2026-06-27": 1821000.0,
         "2026-07-04": 1798000.0,
-        "2026-07-11": 1796000.0
+        "2026-07-11": 1789000.0,
+        "2026-07-18": 1782000.0
       }
     },
     "CPIAUCSL": {
@@ -621,6 +621,26 @@
     "DGS2": {
       "latest_first": [
         {
+          "date": "2026-07-30",
+          "value": 4.23
+        },
+        {
+          "date": "2026-07-29",
+          "value": 4.22
+        },
+        {
+          "date": "2026-07-28",
+          "value": 4.26
+        },
+        {
+          "date": "2026-07-27",
+          "value": 4.31
+        },
+        {
+          "date": "2026-07-24",
+          "value": 4.33
+        },
+        {
           "date": "2026-07-23",
           "value": 4.37
         },
@@ -647,48 +667,32 @@
         {
           "date": "2026-07-15",
           "value": 4.13
-        },
-        {
-          "date": "2026-07-14",
-          "value": 4.18
-        },
-        {
-          "date": "2026-07-13",
-          "value": 4.26
-        },
-        {
-          "date": "2026-07-10",
-          "value": 4.21
-        },
-        {
-          "date": "2026-07-09",
-          "value": 4.16
-        },
-        {
-          "date": "2026-07-08",
-          "value": 4.21
         }
       ],
       "latest_observations": {
-        "2026-07-08": 4.21,
-        "2026-07-09": 4.16,
-        "2026-07-10": 4.21,
-        "2026-07-13": 4.26,
-        "2026-07-14": 4.18,
         "2026-07-15": 4.13,
         "2026-07-16": 4.16,
         "2026-07-17": 4.18,
         "2026-07-20": 4.21,
         "2026-07-21": 4.26,
         "2026-07-22": 4.31,
-        "2026-07-23": 4.37
+        "2026-07-23": 4.37,
+        "2026-07-24": 4.33,
+        "2026-07-27": 4.31,
+        "2026-07-28": 4.26,
+        "2026-07-29": 4.22,
+        "2026-07-30": 4.23
       }
     },
     "ICSA": {
       "latest_first": [
         {
+          "date": "2026-07-25",
+          "value": 197000.0
+        },
+        {
           "date": "2026-07-18",
-          "value": 187000.0
+          "value": 188000.0
         },
         {
           "date": "2026-07-11",
@@ -729,14 +733,9 @@
         {
           "date": "2026-05-09",
           "value": 212000.0
-        },
-        {
-          "date": "2026-05-02",
-          "value": 199000.0
         }
       ],
       "latest_observations": {
-        "2026-05-02": 199000.0,
         "2026-05-09": 212000.0,
         "2026-05-16": 210000.0,
         "2026-05-23": 212000.0,
@@ -747,7 +746,8 @@
         "2026-06-27": 217000.0,
         "2026-07-04": 217000.0,
         "2026-07-11": 209000.0,
-        "2026-07-18": 187000.0
+        "2026-07-18": 188000.0,
+        "2026-07-25": 197000.0
       }
     },
     "JTSJOL": {
@@ -1083,12 +1083,16 @@
     "PCEPI": {
       "latest_first": [
         {
+          "date": "2026-06-01",
+          "value": 131.392
+        },
+        {
           "date": "2026-05-01",
-          "value": 131.527
+          "value": 131.535
         },
         {
           "date": "2026-04-01",
-          "value": 130.938
+          "value": 130.932
         },
         {
           "date": "2026-03-01",
@@ -1125,14 +1129,9 @@
         {
           "date": "2025-07-01",
           "value": 126.96
-        },
-        {
-          "date": "2025-06-01",
-          "value": 126.743
         }
       ],
       "latest_observations": {
-        "2025-06-01": 126.743,
         "2025-07-01": 126.96,
         "2025-08-01": 127.293,
         "2025-09-01": 127.625,
@@ -1142,19 +1141,24 @@
         "2026-01-01": 129.023,
         "2026-02-01": 129.539,
         "2026-03-01": 130.403,
-        "2026-04-01": 130.938,
-        "2026-05-01": 131.527
+        "2026-04-01": 130.932,
+        "2026-05-01": 131.535,
+        "2026-06-01": 131.392
       }
     },
     "PCEPILFE": {
       "latest_first": [
         {
+          "date": "2026-06-01",
+          "value": 130.266
+        },
+        {
           "date": "2026-05-01",
-          "value": 130.082
+          "value": 130.094
         },
         {
           "date": "2026-04-01",
-          "value": 129.667
+          "value": 129.663
         },
         {
           "date": "2026-03-01",
@@ -1191,14 +1195,9 @@
         {
           "date": "2025-07-01",
           "value": 126.43
-        },
-        {
-          "date": "2025-06-01",
-          "value": 126.121
         }
       ],
       "latest_observations": {
-        "2025-06-01": 126.121,
         "2025-07-01": 126.43,
         "2025-08-01": 126.714,
         "2025-09-01": 126.954,
@@ -1208,8 +1207,9 @@
         "2026-01-01": 128.455,
         "2026-02-01": 128.961,
         "2026-03-01": 129.343,
-        "2026-04-01": 129.667,
-        "2026-05-01": 130.082
+        "2026-04-01": 129.663,
+        "2026-05-01": 130.094,
+        "2026-06-01": 130.266
       }
     },
     "SAHMREALTIME": {
@@ -1492,7 +1492,7 @@
     },
     "CC4WSA": {
       "error": null,
-      "latest_date": "2026-07-11",
+      "latest_date": "2026-07-18",
       "name": "Continuing Claims 4-week Moving Average",
       "observation_count": 260,
       "ok": true,
@@ -1503,7 +1503,7 @@
     },
     "CCSA": {
       "error": null,
-      "latest_date": "2026-07-11",
+      "latest_date": "2026-07-18",
       "name": "Continued Claims",
       "observation_count": 260,
       "ok": true,
@@ -1536,7 +1536,7 @@
     },
     "DGS2": {
       "error": null,
-      "latest_date": "2026-07-23",
+      "latest_date": "2026-07-30",
       "name": "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity",
       "observation_count": 249,
       "ok": true,
@@ -1547,7 +1547,7 @@
     },
     "ICSA": {
       "error": null,
-      "latest_date": "2026-07-18",
+      "latest_date": "2026-07-25",
       "name": "Initial Claims",
       "observation_count": 260,
       "ok": true,
@@ -1613,7 +1613,7 @@
     },
     "PCEPI": {
       "error": null,
-      "latest_date": "2026-05-01",
+      "latest_date": "2026-06-01",
       "name": "Personal Consumption Expenditures Price Index",
       "observation_count": 120,
       "ok": true,
@@ -1624,7 +1624,7 @@
     },
     "PCEPILFE": {
       "error": null,
-      "latest_date": "2026-05-01",
+      "latest_date": "2026-06-01",
       "name": "Core PCE Price Index Less Food and Energy",
       "observation_count": 120,
       "ok": true,
