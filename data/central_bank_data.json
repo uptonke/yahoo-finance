@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-04T22:53:47.448031+00:00",
+  "generated_at": "2026-08-05T22:55:13.247893+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Fed official structured sources",
@@ -12,7 +12,7 @@
       "status": "ok",
       "display_name": "Fed",
       "current_rate": "3.50% - 3.75%",
-      "current_rate_date": "2026-08-04",
+      "current_rate_date": "2026-08-05",
       "next_meeting": "2026-09-16",
       "market_pricing_path": "N/A",
       "sources": {
@@ -27,25 +27,16 @@
       }
     },
     "ecb": {
-      "status": "ok",
+      "status": "error",
       "display_name": "ECB",
-      "current_rate": "MRR 2.40% / DFR 2.25% / MLFR 2.65%",
-      "current_rate_date": "2026-08-04",
-      "next_meeting": "2026-09-10",
+      "current_rate": "N/A",
+      "current_rate_date": "N/A",
+      "next_meeting": "N/A",
       "market_pricing_path": "N/A",
-      "sources": {
-        "mrr_series_key": "D.U2.EUR.4F.KR.MRR_RT.LEV",
-        "dfr_series_key": "D.U2.EUR.4F.KR.DFR.LEV",
-        "mlfr_series_key": "D.U2.EUR.4F.KR.MLFR.LEV",
-        "schedule_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
-        "market_pricing_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html"
-      },
-      "notes": [],
-      "detail": {
-        "mrr": "2.40%",
-        "dfr": "2.25%",
-        "mlfr": "2.65%"
-      }
+      "sources": {},
+      "notes": [
+        "HTTPSConnectionPool(host='data-api.ecb.europa.eu', port=443): Max retries exceeded with url: /service/data/FM/D.U2.EUR.4F.KR.DFR.LEV?lastNObservations=1 (Caused by ReadTimeoutError(\"HTTPSConnectionPool(host='data-api.ecb.europa.eu', port=443): Read timed out. (read timeout=20)\"))"
+      ]
     },
     "boj": {
       "status": "ok",
