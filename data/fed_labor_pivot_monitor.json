@@ -1,46 +1,46 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-08-01T01:00:55+00:00",
-  "generated_date_taipei": "2026-08-01",
+  "generated_at_utc": "2026-08-08T01:01:39+00:00",
+  "generated_date_taipei": "2026-08-08",
   "important_note": "This JSON provides deterministic numeric inputs. Core labor indicators drive the preliminary regime; secondary labor-quality and inflation-gate indicators provide confirmation/constraints. Final Fed pivot classification still requires official Federal Reserve communication review.",
   "latest_observation_dates": {
-    "AWHAETP": "2026-06-01",
-    "CC4WSA": "2026-07-18",
-    "CCSA": "2026-07-18",
+    "AWHAETP": "2026-07-01",
+    "CC4WSA": "2026-07-25",
+    "CCSA": "2026-07-25",
     "CPIAUCSL": "2026-06-01",
     "CPILFESL": "2026-06-01",
-    "DGS2": "2026-07-30",
-    "ICSA": "2026-07-25",
-    "JTSJOL": "2026-05-01",
-    "JTSLDL": "2026-05-01",
-    "JTSQUR": "2026-05-01",
-    "LNS13023621": "2026-06-01",
-    "PAYEMS": "2026-06-01",
+    "DGS2": "2026-08-06",
+    "ICSA": "2026-08-01",
+    "JTSJOL": "2026-06-01",
+    "JTSLDL": "2026-06-01",
+    "JTSQUR": "2026-06-01",
+    "LNS13023621": "2026-07-01",
+    "PAYEMS": "2026-07-01",
     "PCEPI": "2026-06-01",
     "PCEPILFE": "2026-06-01",
-    "SAHMREALTIME": "2026-06-01",
-    "TEMPHELPS": "2026-06-01",
-    "U6RATE": "2026-06-01",
-    "UNRATE": "2026-06-01"
+    "SAHMREALTIME": "2026-07-01",
+    "TEMPHELPS": "2026-07-01",
+    "U6RATE": "2026-07-01",
+    "UNRATE": "2026-07-01"
   },
   "metrics": {
     "average_weekly_hours_total_private": {
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
       "source_series": "AWHAETP",
       "status": "green",
-      "three_month_change_hours": 0.1,
+      "three_month_change_hours": 0.0,
       "threshold": "secondary confirmation: 3M change <= -0.1 hours",
       "value_hours": 34.3
     },
     "continuing_claims": {
       "consecutive_3w_increases": false,
       "cycle_high_52w": false,
-      "latest_period": "2026-07-18",
+      "latest_period": "2026-07-25",
       "source_series": "CC4WSA",
       "status": "green",
       "threshold": "consecutive increases or 52-week cycle high",
-      "value_persons": 1797500.0
+      "value_persons": 1791250.0
     },
     "core_cpi": {
       "index_value": 336.065,
@@ -94,52 +94,56 @@
     "initial_claims_4w_avg": {
       "components": [
         {
+          "date": "2026-08-01",
+          "value_persons": 199000.0
+        },
+        {
           "date": "2026-07-25",
-          "value_persons": 197000.0
+          "value_persons": 198000.0
         },
         {
           "date": "2026-07-18",
-          "value_persons": 188000.0
+          "value_persons": 189000.0
         },
         {
           "date": "2026-07-11",
           "value_persons": 209000.0
-        },
-        {
-          "date": "2026-07-04",
-          "value_persons": 217000.0
         }
       ],
-      "latest_period": "2026-07-25",
+      "latest_period": "2026-08-01",
       "source_series": "ICSA",
       "status": "green",
       "threshold": "yellow >250k; orange >275k; red >300k",
-      "value_persons": 202750.0
+      "value_persons": 198750.0
     },
     "job_losers": {
       "consecutive_3m_increases": false,
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
       "source_series": "LNS13023621",
       "status": "green",
-      "three_month_percent_change": -3.67,
+      "three_month_percent_change": -5.75,
       "threshold": "secondary confirmation: 3 consecutive monthly increases or 3M change >=5%",
-      "value_thousand": 3278.0
+      "value_thousand": 3309.0
     },
     "jolts_layoffs": {
       "consecutive_3m_increases": false,
-      "latest_period": "2026-05-01",
+      "latest_period": "2026-06-01",
       "source_series": "JTSLDL",
       "status": "green",
       "threshold": "sustained increase proxy: 3 consecutive monthly increases",
-      "value_thousand": 1708.0
+      "value_thousand": 1766.0
     },
     "jolts_openings": {
       "consecutive_3m_declines": false,
       "latest_4_observations": [
         {
+          "date": "2026-06-01",
+          "value_thousand": 7359.0
+        },
+        {
           "date": "2026-05-01",
-          "value_thousand": 7594.0
+          "value_thousand": 7537.0
         },
         {
           "date": "2026-04-01",
@@ -148,25 +152,21 @@
         {
           "date": "2026-03-01",
           "value_thousand": 6887.0
-        },
-        {
-          "date": "2026-02-01",
-          "value_thousand": 6922.0
         }
       ],
-      "latest_period": "2026-05-01",
+      "latest_period": "2026-06-01",
       "source_series": "JTSJOL",
       "status": "green",
       "threshold": "3 consecutive monthly declines",
-      "value_thousand": 7594.0
+      "value_thousand": 7359.0
     },
     "jolts_quits_rate": {
       "consecutive_3m_declines": false,
-      "latest_period": "2026-05-01",
+      "latest_period": "2026-06-01",
       "source_series": "JTSQUR",
       "status": "green",
       "threshold": "sustained decline proxy: 3 consecutive monthly declines",
-      "value_percent": 1.9
+      "value_percent": 2.0
     },
     "labor_quality_secondary_confirmation": {
       "adverse_indicator_count": 0,
@@ -183,113 +183,117 @@
     "nfp_3m_avg": {
       "components": [
         {
-          "change": 57.0,
-          "current_level": 158984.0,
-          "period": "2026-06-01",
-          "previous_level": 158927.0
+          "change": -23.0,
+          "current_level": 158858.0,
+          "period": "2026-07-01",
+          "previous_level": 158881.0
         },
         {
-          "change": 129.0,
-          "current_level": 158927.0,
+          "change": 20.0,
+          "current_level": 158881.0,
+          "period": "2026-06-01",
+          "previous_level": 158861.0
+        },
+        {
+          "change": 63.0,
+          "current_level": 158861.0,
           "period": "2026-05-01",
           "previous_level": 158798.0
-        },
-        {
-          "change": 148.0,
-          "current_level": 158798.0,
-          "period": "2026-04-01",
-          "previous_level": 158650.0
         }
       ],
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "source_series": "PAYEMS",
-      "status": "green",
+      "status": "red",
       "threshold": "yellow <75k; red <50k",
-      "value_thousand": 111.3
+      "value_thousand": 20.0
     },
     "nfp_headline": {
       "calculation": "latest PAYEMS level minus previous monthly PAYEMS level",
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "source_series": "PAYEMS",
-      "status": "yellow",
+      "status": "red",
       "threshold": "yellow <75k; red <50k",
-      "value_thousand": 57.0
+      "value_thousand": -23.0
     },
     "nfp_prior_two_month_revision": {
       "details": [
         {
-          "current_level_thousand": 158927.0,
-          "period": "2026-05-01",
-          "previous_snapshot_level_thousand": 158927.0,
-          "revision_thousand": 0.0
+          "current_level_thousand": 158881.0,
+          "period": "2026-06-01",
+          "previous_snapshot_level_thousand": 158984.0,
+          "revision_thousand": -103.0
         },
         {
-          "current_level_thousand": 158798.0,
-          "period": "2026-04-01",
-          "previous_snapshot_level_thousand": 158798.0,
-          "revision_thousand": 0.0
+          "current_level_thousand": 158861.0,
+          "period": "2026-05-01",
+          "previous_snapshot_level_thousand": 158927.0,
+          "revision_thousand": -66.0
         }
       ],
-      "downward_revision_abs_thousand": 0.0,
-      "latest_payems_period": "2026-06-01",
+      "downward_revision_abs_thousand": 169.0,
+      "latest_payems_period": "2026-07-01",
       "method": "Compare current PAYEMS levels against previous committed snapshot for the two months before latest release.",
-      "net_revision_thousand": 0.0,
+      "net_revision_thousand": -169.0,
       "note": null,
-      "status": "green",
+      "status": "red",
       "target_periods": [
-        "2026-05-01",
-        "2026-04-01"
+        "2026-06-01",
+        "2026-05-01"
       ]
     },
     "sahm_rule_realtime": {
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "source_series": "SAHMREALTIME",
       "status": "green",
       "threshold": "yellow >=0.30; orange >=0.40; red >=0.50",
-      "value_pp": 0.07
+      "value_pp": -0.03
     },
     "temporary_help_services": {
       "consecutive_3m_declines": false,
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
       "source_series": "TEMPHELPS",
       "status": "green",
-      "three_month_percent_change": 0.78,
+      "three_month_percent_change": 0.59,
       "threshold": "secondary confirmation: 3 consecutive monthly declines or 3M change <= -1%",
-      "value_thousand": 2499.2
+      "value_thousand": 2505.0
     },
     "two_year_treasury_yield": {
-      "change_approx_4w_pp": 0.09,
-      "latest_period": "2026-07-30",
+      "change_approx_4w_pp": 0.04,
+      "latest_period": "2026-08-06",
       "source_series": "DGS2",
       "status": "not_applicable",
       "threshold": "market confirmation only; not used for labor-regime classification",
-      "value_percent": 4.23
+      "value_percent": 4.25
     },
     "u6_unemployment_rate": {
-      "latest_period": "2026-06-01",
-      "mom_change_pp": -0.2,
+      "latest_period": "2026-07-01",
+      "mom_change_pp": 0.0,
       "role": "secondary labor-quality confirmation; cannot independently trigger RED or PIVOT CONFIRMED",
       "source_series": "U6RATE",
       "status": "green",
-      "three_month_change_pp": -0.1,
+      "three_month_change_pp": -0.3,
       "threshold": "secondary confirmation: MoM >=0.2pp or 3M change >=0.3pp",
       "value_percent": 7.9
     },
     "unemployment_rate_u3": {
-      "latest_period": "2026-06-01",
+      "latest_period": "2026-07-01",
       "mom_change_pp": -0.1,
       "source_series": "UNRATE",
       "status": "green",
       "threshold": "month-over-month increase >=0.2 percentage points",
-      "value_percent": 4.2
+      "value_percent": 4.1
     }
   },
   "missing_required_series": [],
-  "numeric_regime_preliminary": "YELLOW",
+  "numeric_regime_preliminary": "RED",
   "raw_snapshots": {
     "AWHAETP": {
       "latest_first": [
+        {
+          "date": "2026-07-01",
+          "value": 34.3
+        },
         {
           "date": "2026-06-01",
           "value": 34.3
@@ -333,14 +337,9 @@
         {
           "date": "2025-08-01",
           "value": 34.2
-        },
-        {
-          "date": "2025-07-01",
-          "value": 34.2
         }
       ],
       "latest_observations": {
-        "2025-07-01": 34.2,
         "2025-08-01": 34.2,
         "2025-09-01": 34.2,
         "2025-10-01": 34.2,
@@ -351,14 +350,19 @@
         "2026-03-01": 34.2,
         "2026-04-01": 34.3,
         "2026-05-01": 34.3,
-        "2026-06-01": 34.3
+        "2026-06-01": 34.3,
+        "2026-07-01": 34.3
       }
     },
     "CC4WSA": {
       "latest_first": [
         {
+          "date": "2026-07-25",
+          "value": 1791250.0
+        },
+        {
           "date": "2026-07-18",
-          "value": 1797500.0
+          "value": 1796250.0
         },
         {
           "date": "2026-07-11",
@@ -399,14 +403,9 @@
         {
           "date": "2026-05-09",
           "value": 1770250.0
-        },
-        {
-          "date": "2026-05-02",
-          "value": 1779500.0
         }
       ],
       "latest_observations": {
-        "2026-05-02": 1779500.0,
         "2026-05-09": 1770250.0,
         "2026-05-16": 1772500.0,
         "2026-05-23": 1775750.0,
@@ -417,14 +416,19 @@
         "2026-06-27": 1809750.0,
         "2026-07-04": 1809250.0,
         "2026-07-11": 1803500.0,
-        "2026-07-18": 1797500.0
+        "2026-07-18": 1796250.0,
+        "2026-07-25": 1791250.0
       }
     },
     "CCSA": {
       "latest_first": [
         {
+          "date": "2026-07-25",
+          "value": 1801000.0
+        },
+        {
           "date": "2026-07-18",
-          "value": 1782000.0
+          "value": 1777000.0
         },
         {
           "date": "2026-07-11",
@@ -465,14 +469,9 @@
         {
           "date": "2026-05-09",
           "value": 1771000.0
-        },
-        {
-          "date": "2026-05-02",
-          "value": 1776000.0
         }
       ],
       "latest_observations": {
-        "2026-05-02": 1776000.0,
         "2026-05-09": 1771000.0,
         "2026-05-16": 1785000.0,
         "2026-05-23": 1771000.0,
@@ -483,7 +482,8 @@
         "2026-06-27": 1821000.0,
         "2026-07-04": 1798000.0,
         "2026-07-11": 1789000.0,
-        "2026-07-18": 1782000.0
+        "2026-07-18": 1777000.0,
+        "2026-07-25": 1801000.0
       }
     },
     "CPIAUCSL": {
@@ -621,6 +621,26 @@
     "DGS2": {
       "latest_first": [
         {
+          "date": "2026-08-06",
+          "value": 4.25
+        },
+        {
+          "date": "2026-08-05",
+          "value": 4.18
+        },
+        {
+          "date": "2026-08-04",
+          "value": 4.2
+        },
+        {
+          "date": "2026-08-03",
+          "value": 4.25
+        },
+        {
+          "date": "2026-07-31",
+          "value": 4.28
+        },
+        {
           "date": "2026-07-30",
           "value": 4.23
         },
@@ -647,52 +667,36 @@
         {
           "date": "2026-07-22",
           "value": 4.31
-        },
-        {
-          "date": "2026-07-21",
-          "value": 4.26
-        },
-        {
-          "date": "2026-07-20",
-          "value": 4.21
-        },
-        {
-          "date": "2026-07-17",
-          "value": 4.18
-        },
-        {
-          "date": "2026-07-16",
-          "value": 4.16
-        },
-        {
-          "date": "2026-07-15",
-          "value": 4.13
         }
       ],
       "latest_observations": {
-        "2026-07-15": 4.13,
-        "2026-07-16": 4.16,
-        "2026-07-17": 4.18,
-        "2026-07-20": 4.21,
-        "2026-07-21": 4.26,
         "2026-07-22": 4.31,
         "2026-07-23": 4.37,
         "2026-07-24": 4.33,
         "2026-07-27": 4.31,
         "2026-07-28": 4.26,
         "2026-07-29": 4.22,
-        "2026-07-30": 4.23
+        "2026-07-30": 4.23,
+        "2026-07-31": 4.28,
+        "2026-08-03": 4.25,
+        "2026-08-04": 4.2,
+        "2026-08-05": 4.18,
+        "2026-08-06": 4.25
       }
     },
     "ICSA": {
       "latest_first": [
         {
+          "date": "2026-08-01",
+          "value": 199000.0
+        },
+        {
           "date": "2026-07-25",
-          "value": 197000.0
+          "value": 198000.0
         },
         {
           "date": "2026-07-18",
-          "value": 188000.0
+          "value": 189000.0
         },
         {
           "date": "2026-07-11",
@@ -729,14 +733,9 @@
         {
           "date": "2026-05-16",
           "value": 210000.0
-        },
-        {
-          "date": "2026-05-09",
-          "value": 212000.0
         }
       ],
       "latest_observations": {
-        "2026-05-09": 212000.0,
         "2026-05-16": 210000.0,
         "2026-05-23": 212000.0,
         "2026-05-30": 225000.0,
@@ -746,15 +745,20 @@
         "2026-06-27": 217000.0,
         "2026-07-04": 217000.0,
         "2026-07-11": 209000.0,
-        "2026-07-18": 188000.0,
-        "2026-07-25": 197000.0
+        "2026-07-18": 189000.0,
+        "2026-07-25": 198000.0,
+        "2026-08-01": 199000.0
       }
     },
     "JTSJOL": {
       "latest_first": [
         {
+          "date": "2026-06-01",
+          "value": 7359.0
+        },
+        {
           "date": "2026-05-01",
-          "value": 7594.0
+          "value": 7537.0
         },
         {
           "date": "2026-04-01",
@@ -795,14 +799,9 @@
         {
           "date": "2025-07-01",
           "value": 7089.0
-        },
-        {
-          "date": "2025-06-01",
-          "value": 7204.0
         }
       ],
       "latest_observations": {
-        "2025-06-01": 7204.0,
         "2025-07-01": 7089.0,
         "2025-08-01": 6919.0,
         "2025-09-01": 7169.0,
@@ -813,14 +812,19 @@
         "2026-02-01": 6922.0,
         "2026-03-01": 6887.0,
         "2026-04-01": 7585.0,
-        "2026-05-01": 7594.0
+        "2026-05-01": 7537.0,
+        "2026-06-01": 7359.0
       }
     },
     "JTSLDL": {
       "latest_first": [
         {
+          "date": "2026-06-01",
+          "value": 1766.0
+        },
+        {
           "date": "2026-05-01",
-          "value": 1708.0
+          "value": 1761.0
         },
         {
           "date": "2026-04-01",
@@ -861,14 +865,9 @@
         {
           "date": "2025-07-01",
           "value": 1772.0
-        },
-        {
-          "date": "2025-06-01",
-          "value": 1843.0
         }
       ],
       "latest_observations": {
-        "2025-06-01": 1843.0,
         "2025-07-01": 1772.0,
         "2025-08-01": 1832.0,
         "2025-09-01": 1816.0,
@@ -879,14 +878,19 @@
         "2026-02-01": 1714.0,
         "2026-03-01": 1884.0,
         "2026-04-01": 1667.0,
-        "2026-05-01": 1708.0
+        "2026-05-01": 1761.0,
+        "2026-06-01": 1766.0
       }
     },
     "JTSQUR": {
       "latest_first": [
         {
+          "date": "2026-06-01",
+          "value": 2.0
+        },
+        {
           "date": "2026-05-01",
-          "value": 1.9
+          "value": 2.0
         },
         {
           "date": "2026-04-01",
@@ -927,14 +931,9 @@
         {
           "date": "2025-07-01",
           "value": 2.0
-        },
-        {
-          "date": "2025-06-01",
-          "value": 2.1
         }
       ],
       "latest_observations": {
-        "2025-06-01": 2.1,
         "2025-07-01": 2.0,
         "2025-08-01": 2.0,
         "2025-09-01": 1.9,
@@ -945,11 +944,16 @@
         "2026-02-01": 1.9,
         "2026-03-01": 2.0,
         "2026-04-01": 1.9,
-        "2026-05-01": 1.9
+        "2026-05-01": 2.0,
+        "2026-06-01": 2.0
       }
     },
     "LNS13023621": {
       "latest_first": [
+        {
+          "date": "2026-07-01",
+          "value": 3309.0
+        },
         {
           "date": "2026-06-01",
           "value": 3278.0
@@ -993,14 +997,9 @@
         {
           "date": "2025-07-01",
           "value": 3412.0
-        },
-        {
-          "date": "2025-06-01",
-          "value": 3306.0
         }
       ],
       "latest_observations": {
-        "2025-06-01": 3306.0,
         "2025-07-01": 3412.0,
         "2025-08-01": 3447.0,
         "2025-09-01": 3524.0,
@@ -1011,18 +1010,23 @@
         "2026-03-01": 3403.0,
         "2026-04-01": 3511.0,
         "2026-05-01": 3385.0,
-        "2026-06-01": 3278.0
+        "2026-06-01": 3278.0,
+        "2026-07-01": 3309.0
       }
     },
     "PAYEMS": {
       "latest_first": [
         {
+          "date": "2026-07-01",
+          "value": 158858.0
+        },
+        {
           "date": "2026-06-01",
-          "value": 158984.0
+          "value": 158881.0
         },
         {
           "date": "2026-05-01",
-          "value": 158927.0
+          "value": 158861.0
         },
         {
           "date": "2026-04-01",
@@ -1059,14 +1063,9 @@
         {
           "date": "2025-08-01",
           "value": 158472.0
-        },
-        {
-          "date": "2025-07-01",
-          "value": 158542.0
         }
       ],
       "latest_observations": {
-        "2025-07-01": 158542.0,
         "2025-08-01": 158472.0,
         "2025-09-01": 158548.0,
         "2025-10-01": 158408.0,
@@ -1076,8 +1075,9 @@
         "2026-02-01": 158436.0,
         "2026-03-01": 158650.0,
         "2026-04-01": 158798.0,
-        "2026-05-01": 158927.0,
-        "2026-06-01": 158984.0
+        "2026-05-01": 158861.0,
+        "2026-06-01": 158881.0,
+        "2026-07-01": 158858.0
       }
     },
     "PCEPI": {
@@ -1215,6 +1215,10 @@
     "SAHMREALTIME": {
       "latest_first": [
         {
+          "date": "2026-07-01",
+          "value": -0.03
+        },
+        {
           "date": "2026-06-01",
           "value": 0.07
         },
@@ -1257,14 +1261,9 @@
         {
           "date": "2025-07-01",
           "value": 0.1
-        },
-        {
-          "date": "2025-06-01",
-          "value": 0.17
         }
       ],
       "latest_observations": {
-        "2025-06-01": 0.17,
         "2025-07-01": 0.1,
         "2025-08-01": 0.13,
         "2025-09-01": 0.23,
@@ -1275,18 +1274,23 @@
         "2026-03-01": 0.2,
         "2026-04-01": 0.13,
         "2026-05-01": 0.1,
-        "2026-06-01": 0.07
+        "2026-06-01": 0.07,
+        "2026-07-01": -0.03
       }
     },
     "TEMPHELPS": {
       "latest_first": [
         {
+          "date": "2026-07-01",
+          "value": 2505.0
+        },
+        {
           "date": "2026-06-01",
-          "value": 2499.2
+          "value": 2501.6
         },
         {
           "date": "2026-05-01",
-          "value": 2489.9
+          "value": 2490.6
         },
         {
           "date": "2026-04-01",
@@ -1323,14 +1327,9 @@
         {
           "date": "2025-08-01",
           "value": 2483.3
-        },
-        {
-          "date": "2025-07-01",
-          "value": 2494.2
         }
       ],
       "latest_observations": {
-        "2025-07-01": 2494.2,
         "2025-08-01": 2483.3,
         "2025-09-01": 2471.6,
         "2025-10-01": 2451.8,
@@ -1340,12 +1339,17 @@
         "2026-02-01": 2471.9,
         "2026-03-01": 2479.9,
         "2026-04-01": 2490.4,
-        "2026-05-01": 2489.9,
-        "2026-06-01": 2499.2
+        "2026-05-01": 2490.6,
+        "2026-06-01": 2501.6,
+        "2026-07-01": 2505.0
       }
     },
     "U6RATE": {
       "latest_first": [
+        {
+          "date": "2026-07-01",
+          "value": 7.9
+        },
         {
           "date": "2026-06-01",
           "value": 7.9
@@ -1389,14 +1393,9 @@
         {
           "date": "2025-07-01",
           "value": 7.9
-        },
-        {
-          "date": "2025-06-01",
-          "value": 7.7
         }
       ],
       "latest_observations": {
-        "2025-06-01": 7.7,
         "2025-07-01": 7.9,
         "2025-08-01": 8.1,
         "2025-09-01": 8.1,
@@ -1407,11 +1406,16 @@
         "2026-03-01": 8.0,
         "2026-04-01": 8.2,
         "2026-05-01": 8.1,
-        "2026-06-01": 7.9
+        "2026-06-01": 7.9,
+        "2026-07-01": 7.9
       }
     },
     "UNRATE": {
       "latest_first": [
+        {
+          "date": "2026-07-01",
+          "value": 4.1
+        },
         {
           "date": "2026-06-01",
           "value": 4.2
@@ -1455,14 +1459,9 @@
         {
           "date": "2025-07-01",
           "value": 4.3
-        },
-        {
-          "date": "2025-06-01",
-          "value": 4.1
         }
       ],
       "latest_observations": {
-        "2025-06-01": 4.1,
         "2025-07-01": 4.3,
         "2025-08-01": 4.3,
         "2025-09-01": 4.4,
@@ -1473,7 +1472,8 @@
         "2026-03-01": 4.3,
         "2026-04-01": 4.3,
         "2026-05-01": 4.3,
-        "2026-06-01": 4.2
+        "2026-06-01": 4.2,
+        "2026-07-01": 4.1
       }
     }
   },
@@ -1481,7 +1481,7 @@
   "series_health": {
     "AWHAETP": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "Average Weekly Hours of All Employees, Total Private",
       "observation_count": 120,
       "ok": true,
@@ -1492,7 +1492,7 @@
     },
     "CC4WSA": {
       "error": null,
-      "latest_date": "2026-07-18",
+      "latest_date": "2026-07-25",
       "name": "Continuing Claims 4-week Moving Average",
       "observation_count": 260,
       "ok": true,
@@ -1503,7 +1503,7 @@
     },
     "CCSA": {
       "error": null,
-      "latest_date": "2026-07-18",
+      "latest_date": "2026-07-25",
       "name": "Continued Claims",
       "observation_count": 260,
       "ok": true,
@@ -1536,7 +1536,7 @@
     },
     "DGS2": {
       "error": null,
-      "latest_date": "2026-07-30",
+      "latest_date": "2026-08-06",
       "name": "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity",
       "observation_count": 249,
       "ok": true,
@@ -1547,7 +1547,7 @@
     },
     "ICSA": {
       "error": null,
-      "latest_date": "2026-07-25",
+      "latest_date": "2026-08-01",
       "name": "Initial Claims",
       "observation_count": 260,
       "ok": true,
@@ -1558,7 +1558,7 @@
     },
     "JTSJOL": {
       "error": null,
-      "latest_date": "2026-05-01",
+      "latest_date": "2026-06-01",
       "name": "JOLTS Job Openings: Total Nonfarm",
       "observation_count": 120,
       "ok": true,
@@ -1569,7 +1569,7 @@
     },
     "JTSLDL": {
       "error": null,
-      "latest_date": "2026-05-01",
+      "latest_date": "2026-06-01",
       "name": "JOLTS Layoffs and Discharges: Total Nonfarm",
       "observation_count": 120,
       "ok": true,
@@ -1580,7 +1580,7 @@
     },
     "JTSQUR": {
       "error": null,
-      "latest_date": "2026-05-01",
+      "latest_date": "2026-06-01",
       "name": "JOLTS Quits Rate: Total Nonfarm",
       "observation_count": 120,
       "ok": true,
@@ -1591,7 +1591,7 @@
     },
     "LNS13023621": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "Unemployed Job Losers",
       "observation_count": 119,
       "ok": true,
@@ -1602,7 +1602,7 @@
     },
     "PAYEMS": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "Total Nonfarm Payrolls",
       "observation_count": 120,
       "ok": true,
@@ -1635,7 +1635,7 @@
     },
     "SAHMREALTIME": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "Real-time Sahm Rule Recession Indicator",
       "observation_count": 119,
       "ok": true,
@@ -1646,7 +1646,7 @@
     },
     "TEMPHELPS": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "All Employees, Temporary Help Services",
       "observation_count": 120,
       "ok": true,
@@ -1657,7 +1657,7 @@
     },
     "U6RATE": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "U-6 Unemployment Rate",
       "observation_count": 119,
       "ok": true,
@@ -1668,7 +1668,7 @@
     },
     "UNRATE": {
       "error": null,
-      "latest_date": "2026-06-01",
+      "latest_date": "2026-07-01",
       "name": "Unemployment Rate",
       "observation_count": 119,
       "ok": true,
