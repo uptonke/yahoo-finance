@@ -1,15 +1,15 @@
 {
   "data_status": "DATA_VALID",
-  "generated_at_utc": "2026-08-15T01:01:30+00:00",
-  "generated_date_taipei": "2026-08-15",
+  "generated_at_utc": "2026-08-22T01:01:36+00:00",
+  "generated_date_taipei": "2026-08-22",
   "latest_observation_dates": {
     "AWHAETP": "2026-07-01",
-    "CC4WSA": "2026-08-01",
-    "CCSA": "2026-08-01",
+    "CC4WSA": "2026-08-08",
+    "CCSA": "2026-08-08",
     "CPIAUCSL": "2026-07-01",
     "CPILFESL": "2026-07-01",
-    "DGS2": "2026-08-13",
-    "ICSA": "2026-08-08",
+    "DGS2": "2026-08-20",
+    "ICSA": "2026-08-15",
     "JTSJOL": "2026-06-01",
     "JTSLDL": "2026-06-01",
     "JTSQUR": "2026-06-01",
@@ -35,11 +35,11 @@
     "continuing_claims": {
       "consecutive_3w_increases": false,
       "cycle_high_52w": false,
-      "latest_period": "2026-08-01",
+      "latest_period": "2026-08-08",
       "source_series": "CC4WSA",
       "status": "green",
       "threshold": "consecutive increases or 52-week cycle high",
-      "value_persons": 1785500.0
+      "value_persons": 1789000.0
     },
     "core_cpi": {
       "index_value": 336.789,
@@ -93,8 +93,12 @@
     "initial_claims_4w_avg": {
       "components": [
         {
+          "date": "2026-08-15",
+          "value_persons": 206000.0
+        },
+        {
           "date": "2026-08-08",
-          "value_persons": 209000.0
+          "value_persons": 212000.0
         },
         {
           "date": "2026-08-01",
@@ -103,17 +107,13 @@
         {
           "date": "2026-07-25",
           "value_persons": 198000.0
-        },
-        {
-          "date": "2026-07-18",
-          "value_persons": 189000.0
         }
       ],
-      "latest_period": "2026-08-08",
+      "latest_period": "2026-08-15",
       "source_series": "ICSA",
       "status": "green",
       "threshold": "yellow >250k; orange >275k; red >300k",
-      "value_persons": 199000.0
+      "value_persons": 204000.0
     },
     "job_losers": {
       "consecutive_3m_increases": false,
@@ -258,12 +258,12 @@
       "value_thousand": 2505.0
     },
     "two_year_treasury_yield": {
-      "change_approx_4w_pp": -0.03,
-      "latest_period": "2026-08-13",
+      "change_approx_4w_pp": -0.14,
+      "latest_period": "2026-08-20",
       "source_series": "DGS2",
       "status": "not_applicable",
       "threshold": "market confirmation only; not used for labor-regime classification",
-      "value_percent": 4.15
+      "value_percent": 4.19
     },
     "u6_unemployment_rate": {
       "latest_period": "2026-07-01",
