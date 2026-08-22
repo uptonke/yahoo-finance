@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T22:53:28.464266+00:00",
+  "generated_at": "2026-08-22T22:53:30.735236+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,8 +34,8 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "765.69",
-          "display_change": "+3.09 (+0.41%)",
+          "display_close": "765.72",
+          "display_change": "+3.12 (+0.41%)",
           "as_of_label": "latest close (2026-08-21)",
           "direction": "up",
           "required": true
@@ -169,14 +169,14 @@
       "required": true,
       "max_staleness_days": null,
       "date": "2026-08-21",
-      "close": 765.69,
+      "close": 765.72,
       "prev_close": 762.6,
-      "change": 3.09,
+      "change": 3.12,
       "change_pct": 0.41,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "765.69",
-      "display_change": "+3.09 (+0.41%)",
+      "display_close": "765.72",
+      "display_change": "+3.12 (+0.41%)",
       "as_of_label": "latest close (2026-08-21)",
       "raw_payload": {
         "symbol": "SPY",
@@ -190,20 +190,20 @@
         "open": "766.049988",
         "high": "767.84998",
         "low": "764.16998",
-        "close": "765.69000",
-        "volume": "104467787",
+        "close": "765.71997",
+        "volume": "39030400",
         "previous_close": "762.59998",
-        "change": "3.090027",
-        "percent_change": "0.40519630",
-        "average_volume": "44464992",
+        "change": "3.12000",
+        "percent_change": "0.40912604",
+        "average_volume": "37930580",
         "is_market_open": false,
         "fifty_two_week": {
           "low": "629.28003",
           "high": "779.37000",
-          "low_change": "136.40997",
-          "high_change": "-13.67999",
-          "low_change_percent": "21.67715",
-          "high_change_percent": "-1.75526",
+          "low_change": "136.43994",
+          "high_change": "-13.65002",
+          "low_change_percent": "21.68191",
+          "high_change_percent": "-1.75142",
           "range": "629.280029 - 779.369995"
         }
       },
