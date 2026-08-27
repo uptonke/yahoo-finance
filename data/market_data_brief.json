@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T22:53:38.034731+00:00",
+  "generated_at": "2026-08-27T22:53:33.871571+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -34,9 +34,9 @@
       "equities": [
         {
           "display_name": "S&P 500 Proxy (SPY)",
-          "display_close": "766.08",
-          "display_change": "+0.17 (+0.02%)",
-          "as_of_label": "latest close (2026-08-26)",
+          "display_close": "771.10",
+          "display_change": "+5.02 (+0.66%)",
+          "as_of_label": "latest close (2026-08-27)",
           "direction": "up",
           "required": true
         }
@@ -72,10 +72,10 @@
       "rates": [
         {
           "display_name": "US 10Y Treasury Yield",
-          "display_close": "4.640%",
-          "display_change": "-0.060pp (-1.28%)",
-          "as_of_label": "latest close (2026-08-25)",
-          "direction": "down",
+          "display_close": "4.660%",
+          "display_change": "+0.020pp (+0.43%)",
+          "as_of_label": "latest close (2026-08-26)",
+          "direction": "up",
           "required": true
         }
       ]
@@ -83,9 +83,9 @@
   },
   "taiwan_view": {
     "foreign_flow": {
-      "single_day": "491,996,204",
-      "single_day_raw": 491996204,
-      "date": "2026-08-26",
+      "single_day": "439,040,833",
+      "single_day_raw": 439040833,
+      "date": "2026-08-27",
       "source_used": "twse+tpex",
       "market_scope": "listed+otc",
       "structural_read": "外資當日偏多，上市櫃合計呈現淨買超"
@@ -118,16 +118,16 @@
       "priority": 10,
       "required": true,
       "max_staleness_days": null,
-      "date": "2026-08-26",
-      "close": 766.08,
-      "prev_close": 765.91,
-      "change": 0.17,
-      "change_pct": 0.02,
+      "date": "2026-08-27",
+      "close": 771.1,
+      "prev_close": 766.08,
+      "change": 5.02,
+      "change_pct": 0.66,
       "direction": "up",
       "market_session_label": "latest",
-      "display_close": "766.08",
-      "display_change": "+0.17 (+0.02%)",
-      "as_of_label": "latest close (2026-08-26)",
+      "display_close": "771.10",
+      "display_change": "+5.02 (+0.66%)",
+      "as_of_label": "latest close (2026-08-27)",
       "note": "Using SPY ETF as S&P 500 proxy."
     },
     "taiex": {
@@ -222,16 +222,16 @@
       "priority": 60,
       "required": true,
       "max_staleness_days": 7,
-      "date": "2026-08-25",
-      "close": 4.64,
-      "prev_close": 4.7,
-      "change": -0.06,
-      "change_pct": -1.28,
-      "direction": "down",
+      "date": "2026-08-26",
+      "close": 4.66,
+      "prev_close": 4.64,
+      "change": 0.02,
+      "change_pct": 0.43,
+      "direction": "up",
       "market_session_label": "latest",
-      "display_close": "4.640%",
-      "display_change": "-0.060pp (-1.28%)",
-      "as_of_label": "latest close (2026-08-25)",
+      "display_close": "4.660%",
+      "display_change": "+0.020pp (+0.43%)",
+      "as_of_label": "latest close (2026-08-26)",
       "unit": "%"
     }
   },
