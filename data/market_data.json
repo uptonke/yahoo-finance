@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-28T22:53:33.210418+00:00",
+  "generated_at": "2026-08-29T22:53:32.797293+00:00",
   "schema_version": "A.8",
   "source_stack": [
     "Twelve Data",
@@ -188,14 +188,14 @@
         "timestamp": 1787923800,
         "last_quote_at": 1787947140,
         "open": "771.76001",
-        "high": "775.29199",
-        "low": "768.30762",
+        "high": "775.29999",
+        "low": "768.31000",
         "close": "769.34998",
-        "volume": "36342284",
+        "volume": "36712600",
         "previous_close": "771.099976",
         "change": "-1.75",
         "percent_change": "-0.22694852",
-        "average_volume": "36274228",
+        "average_volume": "36316700",
         "is_market_open": false,
         "fifty_two_week": {
           "low": "629.28003",
